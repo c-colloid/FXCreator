@@ -41,6 +41,7 @@ public class FXCreater : EditorWindow
 	bool m_didInitialize = false;
 	SelectObjectOutline selection;
 	GameObject m_selectObject;
+	GameObject m_oldSelectObject;
 	List<SkinnedMeshRenderer> previewAvatarSMRs = new List<SkinnedMeshRenderer>();
 	int m_selectIndex;
 	
@@ -200,7 +201,16 @@ public class FXCreater : EditorWindow
 		    //case KeyCode.LeftAlt: {
 		    //	alt = true;
 		    //}
-			//    break;
+			    //    break;
+		    case KeyCode.Tab: {
+		    	m_selectIndex = m_selectIndex < previewAvatarSMRs.Count -1 ? m_selectIndex + 1 : 0;
+		    	m_selectObject = previewAvatarSMRs.ElementAt(m_selectIndex).gameObject;
+		    	Selection.activeTransform = m_selectObject.transform;
+			    m_oldSelectObject = m_selectObject;
+			    selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
+			    OnShotRepaint();
+		    	}
+			    	break;
 		    case KeyCode.H:	{
 		    	if (evt.altKey)
 		    	{
@@ -313,31 +323,43 @@ public class FXCreater : EditorWindow
 	    		mousePos.x /= ratio.x;
 	    		mousePos.y /= ratio.y;
 	    		var ray = m_previewScene.Camera.ScreenPointToRay(mousePos);
-	    		ray.origin = new Vector3(ray.origin.x*0.5f,ray.origin.y,ray.origin.z);
-	    		ray.direction = new Vector3(ray.direction.x*0.5f,ray.direction.y,ray.direction.z);
+	    		var screneXRatio = m_previewScene.Camera.pixelWidth;
+	    		Debug.Log(ratio.x);
+	    		ray.origin = new Vector3(ray.origin.x/ratio.x*0.3f, ray.origin.y, ray.origin.z);
+	    		ray.direction = new Vector3(ray.direction.x/ratio.x*0.3f, ray.direction.y, ray.direction.z);
 	    		Debug.DrawRay(ray.origin,ray.direction,Color.white,10f);
 	    		//var hit = new RaycastHit();
 	    		GameObject hit;
+	    		Vector3 oldvert = Vector3.zero;
+	    		Vector3 vert;
 	    		
 	    		//var physicsScene = PhysicsSceneExtensions.GetPhysicsScene(m_previewScene.Scene);
 	    		foreach (var item in previewAvatarSMRs)
 	    		{
+	    			if (!item.gameObject.active || item.gameObject == m_oldSelectObject) continue;
 		    		var deformMeshRayCast = new DeformeMeshRayCast(item.gameObject);
-		    		Debug.Log(item.gameObject);
 	    		
 		    		//if (physicsScene.Raycast(ray.origin, ray.direction,out hit,Mathf.Infinity))
-		    		if (deformMeshRayCast.GetRayCast(ray, out hit))
+		    		if (deformMeshRayCast.GetRayCast(ray, out hit, out vert))
 		    		{
-			    		Debug.Log(hit.transform.parent.name);
+		    			m_selectObject = oldvert == Vector3.zero ? hit : Vector3.Distance(ray.origin,oldvert) <= Vector3.Distance(ray.origin,vert) ? m_selectObject : hit;
+		    			m_selectIndex = previewAvatarSMRs.IndexOf(m_selectObject.GetComponent<SkinnedMeshRenderer>());
+			    		//Debug.Log(hit.transform.name+" : "+vert+" * "+Vector3.Distance(ray.origin,vert)+" = "+m_selectObject);
+			    		
 			    		//m_selectIndex = cloneAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
-			    		m_selectIndex = previewAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
-			    		m_selectObject = previewAvatarSMRs.ElementAt(m_selectIndex).gameObject;
+			    		//m_selectIndex = previewAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
+			    		//m_selectObject = hit.gameObject;
+			    		//Selection.activeTransform = m_selectObject.transform;
+			    		//selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
+			    		//OnShotRepaint();
+			    		//return;
+			    		oldvert = Vector3.Distance(ray.origin,oldvert) <= Vector3.Distance(ray.origin,vert) ? oldvert : vert;
 			    		Selection.activeTransform = m_selectObject.transform;
-			    		selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
-			    		OnShotRepaint();
-			    		return;
 		    		}
 	    		}
+	    		m_oldSelectObject = m_selectObject;
+		    	selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
+	    		OnShotRepaint();
 	    	}
 	    });
 	    
@@ -474,7 +496,10 @@ public class FXCreater : EditorWindow
 		{
 			rootVisualElement.Q<ToggleinButton>().Q<Button>().style.backgroundImage = (Texture2D)EditorGUIUtility.Load("Animation Icon");
 			rootVisualElement.Q<ToggleinButton>().tooltip = "Play";
-			graph.Stop();
+			if (graph.IsValid())
+			{
+				graph.Stop();	
+			}
 			defaultGraph.Stop();
 			defaultHumanoidGraph.Stop();
 			EditorApplication.update -= OnUpdate;

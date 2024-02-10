@@ -111,12 +111,13 @@ public class DeformeMeshRayCast : IDisposable
 		dupMesh.RecalculateNormals();
 	}
 
-	public bool GetRayCast(Ray ray, out GameObject hit){
+	public bool GetRayCast(Ray ray, out GameObject hit, out Vector3 vert){
 		//var mousePos = Input.mousePosition;
 		//var ray = Camera.main.ScreenPointToRay (mousePos);
 	
 
 		hit = null;
+		vert = Vector3.zero;
 		getDeformedMesh();
 		tris =  dupMesh.triangles;
 		norms = dupMesh.normals;
@@ -125,20 +126,27 @@ public class DeformeMeshRayCast : IDisposable
 			Debug.DrawLine( ray.origin, ray.origin + ray.direction*100, Color.red);
 	  	
 		for (i = 0; i < tris.Length; i+=3){
+			var vert1 = verts[tris[i + 0]];
+			var vert2 = verts[tris[i + 1]];
+			var vert3 = verts[tris[i + 2]];
+			var distance1 = Vector3.Distance(ray.origin,vert1);
+			var distance2 = Vector3.Distance(ray.origin,vert2);
+			var distance3 = Vector3.Distance(ray.origin,vert3);
 			
 			if (Vector3.Dot( norms[tris[i + 0]], ray.direction) > 0)
 				continue;
 			if (doDebug){
-				Debug.DrawLine( verts[tris[i + 0]], verts[tris[i + 1]]);
-				Debug.DrawLine( verts[tris[i + 1]], verts[tris[i + 2]]);
-				Debug.DrawLine( verts[tris[i + 2]], verts[tris[i + 0]]);
+				Debug.DrawLine( vert1, vert2);
+				Debug.DrawLine( vert2, vert3);
+				Debug.DrawLine( vert3, vert1);
 			}
-			if (RayTriangleIntersect(ray, verts[tris[i + 0]], verts[tris[i + 2]], verts[tris[i + 1]]))
+			if (RayTriangleIntersect(ray, vert1, vert3, vert2))
 			{
 				//var storepos1 = mousePos;
 				//hitfaceCenter = (verts[tris[i + 0]] + verts[tris[i + 1]] + verts[tris[i + 2]]) / 3.0 ;
 				//var hitLocation =  (1 - u - v)  * verts[tris[i + 0]] + v * verts[tris[i + 1]] + u * verts[tris[i + 2]];
 				//var faceNorm = (1 - u - v)  * norms[tris[i + 0]] + v * norms[tris[i + 1]] + u * norms[tris[i + 2]];
+				vert = distance1 <= distance2 ? distance1 <= distance3 ? vert1 : vert3 : distance2 <= distance3 ? vert2 : vert3;
 				hit = DeformingObject;
 				return true;
 			}
