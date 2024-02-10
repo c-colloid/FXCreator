@@ -44,6 +44,7 @@ public class FXCreater : EditorWindow
 	GameObject m_oldSelectObject;
 	List<SkinnedMeshRenderer> previewAvatarSMRs = new List<SkinnedMeshRenderer>();
 	int m_selectIndex;
+	List<GameObject> m_selectObjectsList = new List<GameObject>();
 	
 	bool m_playing = false;
 	PlayableGraph graph;
@@ -203,7 +204,9 @@ public class FXCreater : EditorWindow
 		    //}
 			    //    break;
 		    case KeyCode.Tab: {
-		    	m_selectIndex = m_selectIndex < previewAvatarSMRs.Count -1 ? m_selectIndex + 1 : 0;
+		    	//m_selectIndex = m_selectIndex < previewAvatarSMRs.Count -1 ? m_selectIndex + 1 : 0;
+		    	m_selectIndex = previewAvatarSMRs.IndexOf(m_selectObjectsList.ElementAt(m_selectObjectsList.IndexOf(previewAvatarSMRs.ElementAt(m_selectIndex).gameObject) < m_selectObjectsList.Count -1 ? m_selectObjectsList.IndexOf(previewAvatarSMRs.ElementAt(m_selectIndex).gameObject) +1 : 0).GetComponent<SkinnedMeshRenderer>());
+		    	Debug.Log(m_selectIndex);
 		    	m_selectObject = previewAvatarSMRs.ElementAt(m_selectIndex).gameObject;
 		    	Selection.activeTransform = m_selectObject.transform;
 			    m_oldSelectObject = m_selectObject;
@@ -317,6 +320,7 @@ public class FXCreater : EditorWindow
 	    	//左クリック
 	    	else if (evt.button == 0)
 	    	{
+	    		m_selectObjectsList.Clear();
 	    		var mousePos = evt.localMousePosition;
 	    		mousePos.y = rect.height - mousePos.y;
 	    		Vector2 ratio = new Vector2(rect.width / m_previewScene.Camera.pixelWidth, rect.height / m_previewScene.Camera.pixelHeight);
@@ -351,6 +355,7 @@ public class FXCreater : EditorWindow
 		    		
 		    		if (deformMeshRayCast.GetRayCast(ray, out hit, out vert))
 		    		{
+		    			m_selectObjectsList.Add(item.gameObject);
 		    			m_selectObject = oldvert == Vector3.zero ? hit : Vector3.Distance(ray.origin,oldvert) <= Vector3.Distance(ray.origin,vert) ? m_selectObject : hit;
 			    		//Debug.Log(hit.transform.name+" : "+vert+" * "+Vector3.Distance(ray.origin,vert)+" = "+m_selectObject);
 			    		oldvert = Vector3.Distance(ray.origin,oldvert) <= Vector3.Distance(ray.origin,vert) ? oldvert : vert;
