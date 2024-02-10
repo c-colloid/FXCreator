@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/FX%20Creater/Editor/Resouse/AnimationCard.uss?fileID=7433441132597879392&amp;guid=3d44f0da4475a2340a1cbd41b5c2baf8&amp;type=3#AnimationCard" />
+    <ui:VisualElement style="flex-grow: 1; flex-direction: row;">
+        <ui:VisualElement style="flex-direction: row; justify-content: space-around; align-self: stretch; align-items: stretch; max-width: 50%; min-width: 110px; width: 100%;">
+            <ui:Button text="Button" parse-escape-sequences="true" display-tooltip-when-elided="true" style="margin-left: 10px; margin-right: 10px; margin-top: 20px; margin-bottom: 20px; padding-left: 12px; padding-right: 12px; padding-top: 12px; padding-bottom: 12px; background-image: url(&apos;project://database/Assets/FX%20Creater/Editor/Resouse/AnimationCard.renderTexture?fileID=8400000&amp;guid=7114d7b72b83f3e479b4de97d9e883ef&amp;type=2#AnimationCard&apos;); width: 135px; text-overflow: clip; flex-shrink: 1;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="width: 100%; max-width: 50%; min-width: auto;">
+            <ui:TextField picking-mode="Ignore" label="Text Field" value="filler text" style="flex-direction: column; align-self: stretch;" />
+            <ui:TextField picking-mode="Ignore" label="Text Field" value="filler text" style="flex-direction: column; justify-content: space-between; align-self: stretch;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

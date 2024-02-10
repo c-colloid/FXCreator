@@ -1,0 +1,223 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!162 &1
+EditorUserSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 4
+  m_ConfigSettings:
+    -1052896256:
+      value: 50
+      flags: 0
+    -1079672832:
+      value: 57
+      flags: 0
+    -1165948416:
+      value: 50
+      flags: 0
+    -1181808128:
+      value: 50
+      flags: 0
+    -1216116224:
+      value: 52
+      flags: 0
+    -1244589056:
+      value: 51
+      flags: 0
+    -1246461952:
+      value: 53
+      flags: 0
+    -1405747200:
+      value: 51
+      flags: 0
+    -1437035520:
+      value: 50
+      flags: 0
+    -1617428480:
+      value: 57
+      flags: 0
+    -1695476736:
+      value: 53
+      flags: 0
+    -1701377536:
+      value: 52
+      flags: 0
+    -170423808:
+      value: 52
+      flags: 0
+    -1776446464:
+      value: 50
+      flags: 0
+    -1904148480:
+      value: 53
+      flags: 0
+    -1907158016:
+      value: 50
+      flags: 0
+    -1913058816:
+      value: 50
+      flags: 0
+    -1924136960:
+      value: 57
+      flags: 0
+    -194969600:
+      value: 57
+      flags: 0
+    -1988127744:
+      value: 51
+      flags: 0
+    -2011365376:
+      value: 52
+      flags: 0
+    -2066574336:
+      value: 52
+      flags: 0
+    -208432128:
+      value: 50
+      flags: 0
+    -2092103168:
+      value: 53
+      flags: 0
+    -2096594944:
+      value: 52
+      flags: 0
+    -2098165248:
+      value: 51
+      flags: 0
+    -2115829760:
+      value: 50
+      flags: 0
+    -2127916032:
+      value: 50
+      flags: 0
+    -24931328:
+      value: 50
+      flags: 0
+    -33325056:
+      value: 53
+      flags: 0
+    -375221248:
+      value: 52
+      flags: 0
+    -50460160:
+      value: 57
+      flags: 0
+    -534506496:
+      value: 52
+      flags: 0
+    -553547264:
+      value: 52
+      flags: 0
+    -724366848:
+      value: 51
+      flags: 0
+    -867991552:
+      value: 53
+      flags: 0
+    -896172032:
+      value: 57
+      flags: 0
+    -95354880:
+      value: 51
+      flags: 0
+    1283197440:
+      value: 53
+      flags: 0
+    1295810560:
+      value: 53
+      flags: 0
+    1357152256:
+      value: 53
+      flags: 0
+    1435598848:
+      value: 57
+      flags: 0
+    1511822336:
+      value: 51
+      flags: 0
+    1516568576:
+      value: 57
+      flags: 0
+    1519749632:
+      value: 52
+      flags: 0
+    1609271808:
+      value: 51
+      flags: 0
+    1647280128:
+      value: 53
+      flags: 0
+    1728249856:
+      value: 51
+      flags: 0
+    1923716096:
+      value: 57
+      flags: 0
+    1946288128:
+      value: 57
+      flags: 0
+    1986691072:
+      value: 57
+      flags: 0
+    3249152:
+      value: 52
+      flags: 0
+    380668416:
+      value: 53
+      flags: 0
+    393087488:
+      value: 57
+      flags: 0
+    640581632:
+      value: 50
+      flags: 0
+    666110464:
+      value: 51
+      flags: 0
+    676271104:
+      value: 51
+      flags: 0
+    775885824:
+      value: 53
+      flags: 0
+    828707840:
+      value: 51
+      flags: 0
+    837915648:
+      value: 52
+      flags: 0
+    RecentlyUsedSceneGuid-0:
+      value: 065757555c050f025f5a0f2311745b441415402b2a2e7634752a4562e6b3316a
+      flags: 0
+    RecentlyUsedSceneGuid-1:
+      value: 51545053030d5b095e0d5f714275074410154e7e7d787564782c4e67e7b6356f
+      flags: 0
+    RecentlyUsedSceneGuid-2:
+      value: 5653040753540803585e5c7641750c4441154d2c2a717268752c1b64e4b8603c
+      flags: 0
+    ReorderableListView:
+      value: 184c
+      flags: 0
+    UIBuilder.DisableMouseWheelZooming:
+      value: 37434103
+      flags: 0
+    vcSharedLogLevel:
+      value: 0d5e400f0650
+      flags: 0
+    veList:
+      value: 183b144645154b56323d042d070253041305162b382128371f260a11e3e33f3ff0e823e7e3297d667952a356447e417fb0190c19ff0a06020b0bf93818ed040610c911df1bdc1613c53d1ddacc5f8ba3cebc94aa98aba7989e9fe2e1f7e2e1f4f9dea3fdb9ade882f0efe5dbef828784818af7848c868987f8ca9389fe839c8395bcc59699c7989b99cde0cde2d0e5bdd1fbe4c6dbf5f3ebdddedcf220f3ef7d2a0d28fafcf8f6c0fdf92f857b62979c447e957075868aa587967a94d6d4d1df0ef0d9db06dbdadb21de0f9d6e4174666f4158546e5c66625c2b361e0d23713f4f66643a683b37686e6d334d4a547b46516930423d305812607f1e4f6f1e3d14111a47141c1619150b2c222b013127270032102b00192c2e315f6a5d62ac5d74a37174a6a575a979ece0ef0aff1110f6f0e4fd1e4e52464043599753828054058ead5689875a5d0a1ccec60ff05cbb5fe9d783f6
+      flags: 0
+  m_VCAutomaticAdd: 1
+  m_VCDebugCom: 0
+  m_VCDebugCmd: 0
+  m_VCDebugOut: 0
+  m_SemanticMergeMode: 2
+  m_DesiredImportWorkerCount: 1
+  m_StandbyImportWorkerCount: 1
+  m_IdleImportWorkerShutdownDelay: 60000
+  m_VCShowFailedCheckout: 1
+  m_VCOverwriteFailedCheckoutAssets: 1
+  m_VCProjectOverlayIcons: 1
+  m_VCHierarchyOverlayIcons: 1
+  m_VCOtherOverlayIcons: 1
+  m_VCAllowAsyncUpdate: 0
+  m_ArtifactGarbageCollection: 1
