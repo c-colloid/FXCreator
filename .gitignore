@@ -16,11 +16,12 @@
  !/[Aa]ssets/FxCreater
 
 /[Aa]ssets/Plugins/Editor/Scriptinspector*
-/[Aa]ssets/Afro-da's AVATARS/
-/[Aa]ssets/pon/
-/[Aa]ssets/BearsDen/
-/[Aa]ssets/MimyLab/
+/[Aa]ssets/Afro-da's AVATARS*
+/[Aa]ssets/pon*
+/[Aa]ssets/BearsDen*
+/[Aa]ssets/MimyLab*
 /[Aa]ssets/Hai/ComboGesture
+/[Aa]ssets/MomomaAssets*
 
 # Uncomment this line if you wish to ignore the asset store tools plugin
 /[Aa]ssets/AssetStoreTools*
