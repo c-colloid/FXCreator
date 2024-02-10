@@ -334,29 +334,30 @@ public class FXCreater : EditorWindow
 	    		Vector3 vert;
 	    		
 	    		//var physicsScene = PhysicsSceneExtensions.GetPhysicsScene(m_previewScene.Scene);
+		    	//if (physicsScene.Raycast(ray.origin, ray.direction,out hit,Mathf.Infinity))
+		    	//{
+			    	//m_selectIndex = cloneAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
+			    	//m_selectIndex = previewAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
+			    	//m_selectObject = hit.gameObject;
+			    	//Selection.activeTransform = m_selectObject.transform;
+			    	//selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
+			    	//OnShotRepaint();
+			    	//return;
+		    	//}
 	    		foreach (var item in previewAvatarSMRs)
 	    		{
 	    			if (!item.gameObject.active || item.gameObject == m_oldSelectObject) continue;
 		    		var deformMeshRayCast = new DeformeMeshRayCast(item.gameObject);
-	    		
-		    		//if (physicsScene.Raycast(ray.origin, ray.direction,out hit,Mathf.Infinity))
+		    		
 		    		if (deformMeshRayCast.GetRayCast(ray, out hit, out vert))
 		    		{
 		    			m_selectObject = oldvert == Vector3.zero ? hit : Vector3.Distance(ray.origin,oldvert) <= Vector3.Distance(ray.origin,vert) ? m_selectObject : hit;
-		    			m_selectIndex = previewAvatarSMRs.IndexOf(m_selectObject.GetComponent<SkinnedMeshRenderer>());
 			    		//Debug.Log(hit.transform.name+" : "+vert+" * "+Vector3.Distance(ray.origin,vert)+" = "+m_selectObject);
-			    		
-			    		//m_selectIndex = cloneAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
-			    		//m_selectIndex = previewAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
-			    		//m_selectObject = hit.gameObject;
-			    		//Selection.activeTransform = m_selectObject.transform;
-			    		//selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
-			    		//OnShotRepaint();
-			    		//return;
 			    		oldvert = Vector3.Distance(ray.origin,oldvert) <= Vector3.Distance(ray.origin,vert) ? oldvert : vert;
 			    		Selection.activeTransform = m_selectObject.transform;
 		    		}
 	    		}
+		    	m_selectIndex = previewAvatarSMRs.IndexOf(m_selectObject.GetComponent<SkinnedMeshRenderer>());
 	    		m_oldSelectObject = m_selectObject;
 		    	selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
 	    		OnShotRepaint();
