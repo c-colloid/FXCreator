@@ -26,3 +26,24 @@
     -unity-slice-right: 1;
     -unity-slice-bottom: 1;
 }
+
+#SaveAnimationClip > .unity-popup-field__input {
+    border-left-width: 0;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    margin-top: 1px;
+    margin-bottom: 1px;
+    min-width: 0;
+    min-height: 0;
+    border-left-color: rgb(149, 149, 149);
+    border-right-color: rgb(149, 149, 149);
+    border-top-color: rgb(149, 149, 149);
+    border-bottom-color: rgb(149, 149, 149);
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-left-radius: initial;
+    border-bottom-left-radius: initial;
+}
