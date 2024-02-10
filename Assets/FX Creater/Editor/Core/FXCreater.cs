@@ -316,19 +316,27 @@ public class FXCreater : EditorWindow
 	    		ray.origin = new Vector3(ray.origin.x*0.5f,ray.origin.y,ray.origin.z);
 	    		ray.direction = new Vector3(ray.direction.x*0.5f,ray.direction.y,ray.direction.z);
 	    		Debug.DrawRay(ray.origin,ray.direction,Color.white,10f);
-	    		var hit = new RaycastHit();
-	    		var physicsScene = PhysicsSceneExtensions.GetPhysicsScene(m_previewScene.Scene);
+	    		//var hit = new RaycastHit();
+	    		GameObject hit;
 	    		
-	    		if (physicsScene.Raycast(ray.origin, ray.direction,out hit,Mathf.Infinity))
+	    		//var physicsScene = PhysicsSceneExtensions.GetPhysicsScene(m_previewScene.Scene);
+	    		foreach (var item in previewAvatarSMRs)
 	    		{
-	    			Debug.Log(hit.transform.parent.name);
-	    			//m_selectIndex = cloneAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
-	    			m_selectIndex = previewAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
-	    			m_selectObject = previewAvatarSMRs.ElementAt(m_selectIndex).gameObject;
-	    			Selection.activeTransform = m_selectObject.transform;
-	    			selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
-	    			OnShotRepaint();
-	    			return;
+		    		var deformMeshRayCast = new DeformeMeshRayCast(item.gameObject);
+		    		Debug.Log(item.gameObject);
+	    		
+		    		//if (physicsScene.Raycast(ray.origin, ray.direction,out hit,Mathf.Infinity))
+		    		if (deformMeshRayCast.GetRayCast(ray, out hit))
+		    		{
+			    		Debug.Log(hit.transform.parent.name);
+			    		//m_selectIndex = cloneAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
+			    		m_selectIndex = previewAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
+			    		m_selectObject = previewAvatarSMRs.ElementAt(m_selectIndex).gameObject;
+			    		Selection.activeTransform = m_selectObject.transform;
+			    		selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
+			    		OnShotRepaint();
+			    		return;
+		    		}
 	    		}
 	    	}
 	    });
