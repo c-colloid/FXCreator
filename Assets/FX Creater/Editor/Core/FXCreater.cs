@@ -119,20 +119,18 @@ public class FXCreater : EditorWindow
 		SetPreviewAvatar();
 		foreach (var item in m_previewScene.Avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
 		{
-			var meshcollider = item.gameObject.AddComponent<MeshCollider>();
-			meshcollider.sharedMesh = item.sharedMesh;
 		}
 		
 		//CloneAvatar
-		cloneAvatar = GameObject.Instantiate(m_previewScene.Avatar.gameObject);
-		EditorSceneManager.MoveGameObjectToScene(cloneAvatar,EditorSceneManager.GetActiveScene());
-		foreach (var item in cloneAvatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-		{
-			cloneAvatarSMRs.Add(item);
-		}
+		//cloneAvatar = GameObject.Instantiate(m_previewScene.Avatar.gameObject);
+		//EditorSceneManager.MoveGameObjectToScene(cloneAvatar,EditorSceneManager.GetActiveScene());
+		//foreach (var item in cloneAvatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+		//{
+		//	cloneAvatarSMRs.Add(item);
+		//}
 		//cloneAvatar.hideFlags = HideFlags.HideAndDontSave;
-		SceneVisibilityManager.instance.Hide(cloneAvatar,true);
-		cloneAvatar.tag = "EditorOnly";
+		//SceneVisibilityManager.instance.Hide(cloneAvatar,true);
+		//cloneAvatar.tag = "EditorOnly";
 	}
 	
 	void SetPreviewAvatar()
@@ -141,6 +139,8 @@ public class FXCreater : EditorWindow
 		foreach (var item in m_previewScene.Avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
 		{
 			previewAvatarSMRs.Add(item);
+			var meshcollider = item.gameObject.AddComponent<MeshCollider>();
+			meshcollider.sharedMesh = item.sharedMesh;
 		}
 	}
     
@@ -204,13 +204,13 @@ public class FXCreater : EditorWindow
 		    case KeyCode.H:	{
 		    	if (evt.altKey)
 		    	{
-			    	cloneAvatarSMRs.ForEach(o => o.gameObject.active = true);
+			    	//cloneAvatarSMRs.ForEach(o => o.gameObject.active = true);
 			    	previewAvatarSMRs.ForEach(o => o.gameObject.active = true);
 		    	}
 		    	else if (m_selectObject != null)
 		    	{
 			    	m_selectObject.active = !m_selectObject.active;
-			    	cloneAvatarSMRs.ElementAt(m_selectIndex).gameObject.active = !cloneAvatarSMRs.ElementAt(m_selectIndex).gameObject.active;
+			    	//cloneAvatarSMRs.ElementAt(m_selectIndex).gameObject.active = !cloneAvatarSMRs.ElementAt(m_selectIndex).gameObject.active;
 		    	}
 			    OnShotRepaint();
 		    }
@@ -317,12 +317,13 @@ public class FXCreater : EditorWindow
 	    		ray.direction = new Vector3(ray.direction.x*0.5f,ray.direction.y,ray.direction.z);
 	    		Debug.DrawRay(ray.origin,ray.direction,Color.white,10f);
 	    		var hit = new RaycastHit();
+	    		var physicsScene = PhysicsSceneExtensions.GetPhysicsScene(m_previewScene.Scene);
 	    		
-	    		if (Physics.Raycast(ray,out hit,Mathf.Infinity))
+	    		if (physicsScene.Raycast(ray.origin, ray.direction,out hit,Mathf.Infinity))
 	    		{
 	    			Debug.Log(hit.transform.parent.name);
-	    			m_selectIndex = cloneAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
-	    			
+	    			//m_selectIndex = cloneAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
+	    			m_selectIndex = previewAvatarSMRs.IndexOf(hit.transform.GetComponent<SkinnedMeshRenderer>());
 	    			m_selectObject = previewAvatarSMRs.ElementAt(m_selectIndex).gameObject;
 	    			Selection.activeTransform = m_selectObject.transform;
 	    			selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
