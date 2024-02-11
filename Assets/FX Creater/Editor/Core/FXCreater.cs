@@ -55,6 +55,12 @@ public class FXCreater : EditorWindow
 	List<SkinnedMeshRenderer> originalAvatarSMRs = new List<SkinnedMeshRenderer>();
 	GameObject cloneAvatar;
 	List<SkinnedMeshRenderer> cloneAvatarSMRs = new List<SkinnedMeshRenderer>();
+	enum SaveType
+	{
+		Empty,
+		IsActive,
+		BlendShape
+	}
 #endregion
 #region CreateWindow
 	[MenuItem("Tools/FXCreater/", priority = 1000)]
@@ -173,6 +179,7 @@ public class FXCreater : EditorWindow
 	    var newAnimationName = root.Q<BetterTextField>("AnimationName");
 	    var resetAnimationNameButton = root.Q<Button>("ResetAnimationName");
 	    var saveNewAnimationClipButton = root.Q<Button>("SaveAnimationClip");
+	    var saveNewAnimationClipDropdown = root.Q<DropdownField>("SaveAnimationClip");
 	    var getVisualExpressionEditorButton = root.Q<Button>("AnimationFile");
 	    clipsDropdown = root.Q<DropDownField>("ClipsDropDown");
 	    var render = root.Q<VisualElement>("Render");
@@ -263,17 +270,24 @@ public class FXCreater : EditorWindow
 	    };
 	    
 	    saveNewAnimationClipButton.clicked += () => {
-	    	var NewClipPath = EditorUtility.SaveFilePanelInProject("Save new AnimationClip",$"{newAnimationName.value}","anim","",string.IsNullOrEmpty(m_folderPath_TextField.value) ? "Assets" : m_folderPath_TextField.value);
-	    	if (string.IsNullOrEmpty(NewClipPath)) return;
-		    var newClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(NewClipPath);
-	    	if (newClip == null)
-	    	{
-		    	AssetDatabase.CreateAsset(newClip = new AnimationClip(),NewClipPath);	
-	    	}
+	    	//var NewClipPath = EditorUtility.SaveFilePanelInProject("Save new AnimationClip",$"{newAnimationName.value}","anim","",string.IsNullOrEmpty(m_folderPath_TextField.value) ? "Assets" : m_folderPath_TextField.value);
+	    	//if (string.IsNullOrEmpty(NewClipPath)) return;
+		    //var newClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(NewClipPath);
+	    	//if (newClip == null)
+	    	//{
+		    //	AssetDatabase.CreateAsset(newClip = new AnimationClip(),NewClipPath);	
+	    	//}
+	    	var newClip = AnimationClipsUtility.SaveNewClip(newAnimationName.value, m_folderPath_TextField.value);
+	    	if (newClip == null) return;
 	    	if (clips.Contains(newClip)) return;
 	    	clips.Add(newClip);
 	    	clipsDropdown.Popupvalues.Add($"Create/{newClip.name}.anim");
 	    };
+	    
+	    saveNewAnimationClipDropdown.RegisterValueChangedCallback(evt => {
+	    	Debug.Log(evt.newValue);
+	    	saveNewAnimationClipDropdown.index = -1;
+	    });
         
         getVisualExpressionEditorButton.clicked += () => {
         	VisualExpressionsEditorWindow.ShowWindow();
@@ -290,7 +304,8 @@ public class FXCreater : EditorWindow
         
 	    //DefaultAnimationClipの作成
 	    AnimationClip defaultclip = new AnimationClip();
-	    CreateDefaultAnimationClip(defaultclip);
+	    //CreateDefaultAnimationClip(defaultclip);
+	    AnimationClipsUtility.CreateAnimationClip(defaultclip,previewAvatarSMRs);
 	    
 	    //DropDownの更新
 	    var clipname = "";
