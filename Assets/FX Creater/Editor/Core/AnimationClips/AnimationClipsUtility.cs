@@ -102,7 +102,7 @@ public sealed class AnimationClipsUtility
 		//AssetDatabase.CreateAsset(defaultclip,"Assets/defaultanim.anim");
 	}
 	
-	static string GetObjectPath(GameObject Target)
+	public static string GetObjectPath(GameObject Target)
 	{
 		//SkinnedMeshRendererからのアニメーションパス
 		var SMRPath = new StringBuilder(Target.name);
@@ -116,7 +116,7 @@ public sealed class AnimationClipsUtility
 		return SMRPath.ToString();
 	}
 	
-	static void CreateIsActiveAnimation(GameObject Target, AnimationClip TargetClip, string SMRPath)
+	public static void CreateIsActiveAnimation(GameObject Target, AnimationClip TargetClip, string SMRPath)
 	{
 		KeyValue = Convert.ToInt16(Target.active);
 		Key.value = KeyValue;
@@ -125,7 +125,7 @@ public sealed class AnimationClipsUtility
 		TargetClip.SetCurve(SMRPath,typeof(GameObject),$"m_IsActive",Curve);
 	}
 	
-	static void CreateBlendShapeAnimation(SkinnedMeshRenderer SMR, AnimationClip TargetClip, string SMRPath)
+	public static void CreateBlendShapeAnimation(SkinnedMeshRenderer SMR, AnimationClip TargetClip, string SMRPath)
 	{
 		for (int i = 0; i < SMR.sharedMesh.blendShapeCount; i++) 
 		{
@@ -155,11 +155,8 @@ public sealed class AnimationClipsUtility
 	{
 		var NewClipPath = EditorUtility.SaveFilePanelInProject("Save new AnimationClip",$"{Name}","anim","",string.IsNullOrEmpty(Path) ? "Assets" : Path);
 		if (string.IsNullOrEmpty(NewClipPath)) return null;
-		var newClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(NewClipPath);
-		if (newClip == null)
-		{
-			AssetDatabase.CreateAsset(SaveClip,NewClipPath);	
-		}
+		AnimationClip newClip;
+		AssetDatabaseExtension.CreateAssetWithOverwrite(newClip = SaveClip,NewClipPath);
 		return newClip;
 	}
 	#endregion
