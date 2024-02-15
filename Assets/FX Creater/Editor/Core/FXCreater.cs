@@ -22,44 +22,64 @@ namespace colloid.FXCreater
 public class FXCreater : EditorWindow
 {
 #region Variable
+	#region Serialize
 	[SerializeField]
 	VisualTreeAsset _visualTree;
 	[SerializeField]
 	AnimationClip m_t_pose;
+	#endregion
 	
+	#region Path
 	//string m_folderPath = "";
 	//string m_assetsRootPath = "Assets/";
 	FolderPathMenuItem m_folderPathMenuItem = new FolderPathMenuItem();
 	BetterTextField m_folderPath_TextField;
+	#endregion
+	
+	#region VisualElement
 	DropDownField clipsDropdown;
-	public List<AnimationClip> clips;
 	ToggleinButton playButton;
 	Slider playSlider;
+	#endregion
 	
+	#region PreviewWindow
 	PreviewRenderUtility preRenderUtil;
 	PreviewScene m_previewScene;
 	bool m_didInitialize = false;
+	#endregion
+	
+	#region Selection
 	SelectObjectOutline selection;
 	GameObject m_selectObject;
 	GameObject m_oldSelectObject;
-	List<SkinnedMeshRenderer> previewAvatarSMRs = new List<SkinnedMeshRenderer>();
 	int m_selectIndex;
 	List<GameObject> m_selectObjectsList = new List<GameObject>();
+	List<GameObject> m_objectIsActiveList = new List<GameObject>();
+	#endregion
 	
+	#region AnimationGraph
+	public List<AnimationClip> clips;
 	bool m_playing = false;
 	PlayableGraph graph;
 	PlayableGraph defaultGraph;
 	PlayableGraph defaultHumanoidGraph;
 	AnimationClipPlayable clipPlayable;
+	#endregion
+	
+	#region Avatars
 	GameObject originalAvatar;
 	List<SkinnedMeshRenderer> originalAvatarSMRs = new List<SkinnedMeshRenderer>();
-	GameObject cloneAvatar;
-	List<SkinnedMeshRenderer> cloneAvatarSMRs = new List<SkinnedMeshRenderer>();
+	List<SkinnedMeshRenderer> previewAvatarSMRs = new List<SkinnedMeshRenderer>();
+	Dictionary<GameObject,bool> defaultPreviewAvatarObjectsIsActiveList = new Dictionary<GameObject,bool>();
+	//GameObject cloneAvatar;
+	//List<SkinnedMeshRenderer> cloneAvatarSMRs = new List<SkinnedMeshRenderer>();
+	#endregion
+	
 	enum SaveType
 	{
-		Empty,
-		IsActive,
-		BlendShape
+		Empty = 0,
+		IsActive  = 1,
+		BlendShape = 2
 	}
 #endregion
 #region CreateWindow
@@ -101,8 +121,8 @@ public class FXCreater : EditorWindow
 		clips.Clear();
 		originalAvatarSMRs.Clear();
 		previewAvatarSMRs.Clear();
-		cloneAvatarSMRs.Clear();
-		GameObject.DestroyImmediate(cloneAvatar);
+		//cloneAvatarSMRs.Clear();
+		//GameObject.DestroyImmediate(cloneAvatar);
 	}
     
     public void OnDestroy()
@@ -116,18 +136,15 @@ public class FXCreater : EditorWindow
     
 	void InitAvatar()
 	{
-		//OriginalAvatar
+		/*OriginalAvatar*/
 		originalAvatar = EditorSceneManager.GetActiveScene().GetRootGameObjects().ToList().Where(o => o.GetComponent<Animator>()).First();
 		foreach (var item in originalAvatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
 		{
 			originalAvatarSMRs.Add(item);
 		}
 		
-		//PreviewAvatar
+		/*PreviewAvatar*/
 		SetPreviewAvatar();
-		foreach (var item in m_previewScene.Avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-		{
-		}
 		
 		//CloneAvatar
 		//cloneAvatar = GameObject.Instantiate(m_previewScene.Avatar.gameObject);
@@ -149,6 +166,7 @@ public class FXCreater : EditorWindow
 			previewAvatarSMRs.Add(item);
 			var meshcollider = item.gameObject.AddComponent<MeshCollider>();
 			meshcollider.sharedMesh = item.sharedMesh;
+			defaultPreviewAvatarObjectsIsActiveList.Add(item.gameObject,item.gameObject.active);
 		}
 	}
     
@@ -195,7 +213,6 @@ public class FXCreater : EditorWindow
 	    playButton.Q<Button>().style.backgroundImage = (Texture2D)EditorGUIUtility.Load("Animation Icon");
         #endregion
         #region SetKeyEvent
-	    bool alt;
 	    root.RegisterCallback<KeyDownEvent>(evt => {
 		    switch (evt.keyCode)
 		    {
@@ -206,10 +223,6 @@ public class FXCreater : EditorWindow
 		    case KeyCode.Space:
 		    case KeyCode.Return:	playButton.value = !playButton.value;
 			    break;
-		    //case KeyCode.LeftAlt: {
-		    //	alt = true;
-		    //}
-			    //    break;
 		    case KeyCode.Tab: {
 		    	//m_selectIndex = m_selectIndex < previewAvatarSMRs.Count -1 ? m_selectIndex + 1 : 0;
 		    	m_selectIndex = previewAvatarSMRs.IndexOf(m_selectObjectsList.ElementAt(m_selectObjectsList.IndexOf(previewAvatarSMRs.ElementAt(m_selectIndex).gameObject) < m_selectObjectsList.Count -1 ? m_selectObjectsList.IndexOf(previewAvatarSMRs.ElementAt(m_selectIndex).gameObject) +1 : 0).GetComponent<SkinnedMeshRenderer>());
@@ -224,13 +237,11 @@ public class FXCreater : EditorWindow
 		    case KeyCode.H:	{
 		    	if (evt.altKey)
 		    	{
-			    	//cloneAvatarSMRs.ForEach(o => o.gameObject.active = true);
 			    	previewAvatarSMRs.ForEach(o => o.gameObject.active = true);
 		    	}
 		    	else if (m_selectObject != null)
 		    	{
 			    	m_selectObject.active = !m_selectObject.active;
-			    	//cloneAvatarSMRs.ElementAt(m_selectIndex).gameObject.active = !cloneAvatarSMRs.ElementAt(m_selectIndex).gameObject.active;
 		    	}
 			    OnShotRepaint();
 		    }
@@ -285,7 +296,30 @@ public class FXCreater : EditorWindow
 	    };
 	    
 	    saveNewAnimationClipDropdown.RegisterValueChangedCallback(evt => {
+	    	if (evt.newValue == null) return;
 	    	Debug.Log(evt.newValue);
+	    	switch (saveNewAnimationClipDropdown.index)
+	    	{
+	    	case 0: var newClip = AnimationClipsUtility.SaveNewClip(newAnimationName.value, m_folderPath_TextField.value);
+		    	if (newClip == null) break;
+		    	if (clips.Contains(newClip)) break;
+		    	clips.Add(newClip);
+		    	clipsDropdown.Popupvalues.Add($"Create/{newClip.name}.anim");
+		    	break;
+	    	case 1: newClip = new AnimationClip();
+		    	AnimationClipsUtility.CreateAnimationClip(newClip, m_objectIsActiveList);
+		    	newClip = AnimationClipsUtility.SaveNewClip(newAnimationName.value, m_folderPath_TextField.value, newClip);
+		    	if (newClip == null) break;
+		    	if (clips.Contains(newClip)) break;
+		    	clips.Add(newClip);
+		    	clipsDropdown.Popupvalues.Add($"Create/{newClip.name}.anim");
+		    	break;
+	    	case 2:
+		    	break;
+		    	
+	    	default:
+	    		break;
+	    	}
 	    	saveNewAnimationClipDropdown.index = -1;
 	    });
         
@@ -536,16 +570,36 @@ public class FXCreater : EditorWindow
 	}
 	
 	private void OnShotRepaint(){
-		defaultGraph.Play();
-		defaultHumanoidGraph.Play();
+		//defaultGraph.Play();
+		//defaultHumanoidGraph.Play();
 		m_previewScene.Render();
 		Repaint();
 		if (m_playing) {m_playing = false;return;}
-		defaultGraph.Stop();
-		defaultHumanoidGraph.Stop();
+		//defaultGraph.Stop();
+		//defaultHumanoidGraph.Stop();
+		RepaintRenderBorder();
 		Debug.Log("ShotRepaint");
 		EditorApplication.update -= OnShotRepaint;
 		//m_didInitialize = true;
+	}
+	
+	private void RepaintRenderBorder(){
+		m_objectIsActiveList = defaultPreviewAvatarObjectsIsActiveList.Where(o => previewAvatarSMRs.Single(p => p.gameObject == o.Key).gameObject.active != o.Value).Select(o => o.Key).ToList();
+		var render = rootVisualElement.Q<VisualElement>("Render");
+		if (m_objectIsActiveList.Count == 0)
+		{
+			render.style.borderTopColor = Color.clear;
+			render.style.borderBottomColor = Color.clear;
+			render.style.borderLeftColor = Color.clear;
+			render.style.borderRightColor = Color.clear;
+		}
+		else
+		{
+			render.style.borderTopColor = Color.red;
+			render.style.borderBottomColor = Color.red;
+			render.style.borderLeftColor = Color.red;
+			render.style.borderRightColor = Color.red;
+		}
 	}
     #endregion
     
