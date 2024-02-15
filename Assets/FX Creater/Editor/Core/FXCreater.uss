@@ -1,3 +1,7 @@
+#SaveAnimationClip .unity-text-element {
+    display: none;
+}
+
 #PlayButton > .unity-button:hover {
     background-color: rgb(0, 255, 0);
     transition-duration: 105ms;
@@ -34,8 +38,6 @@
     border-right-width: 1px;
     border-top-width: 1px;
     border-bottom-width: 1px;
-    margin-top: 1px;
-    margin-bottom: 1px;
     min-width: 0;
     min-height: 0;
     border-left-color: rgb(149, 149, 149);
@@ -48,9 +50,21 @@
     padding-bottom: 0;
     border-top-left-radius: initial;
     border-bottom-left-radius: initial;
+    margin-left: 0;
 }
 
 #PlayButton:checked > .unity-button:hover {
     background-color: rgb(255, 0, 10);
     transition-duration: 200ms;
+}
+
+#SaveAnimationClip .unity-enum-field__input {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-left-width: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: 0;
 }
