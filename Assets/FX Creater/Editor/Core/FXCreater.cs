@@ -411,9 +411,9 @@ public class FXCreater : EditorWindow
 			    		Selection.activeTransform = m_selectObject.transform;
 		    		}
 	    		}
-		    	m_selectIndex = previewAvatarSMRs.IndexOf(m_selectObject.GetComponent<SkinnedMeshRenderer>());
+		    	m_selectIndex = m_selectObject == null ? -1 : previewAvatarSMRs.IndexOf(m_selectObject.GetComponent<SkinnedMeshRenderer>());
 	    		m_oldSelectObject = m_selectObject;
-		    	selection.SetCommandBuffer(previewAvatarSMRs.ElementAt(m_selectIndex));
+		    	selection.SetCommandBuffer(previewAvatarSMRs.ElementAtOrDefault(m_selectIndex));
 	    		OnShotRepaint();
 	    	}
 	    });
