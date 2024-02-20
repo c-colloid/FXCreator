@@ -425,7 +425,9 @@ public class FXCreater : EditorWindow
 	    	
 	    	//Zoom from FOV
 	    	m_previewScene.Camera.fieldOfView += 0.01f * evt.delta.y * m_previewScene.Camera.fieldOfView;
-	    	OnShotRepaint();
+	    	m_previewScene.Render();
+	    	Repaint();
+	    	//OnShotRepaint();
 	    });
 	    
 	    render.AddManipulator(new RenderDragAndDropManipulator(this, clipsDropdown, typeof(AnimationClip)));
@@ -570,17 +572,16 @@ public class FXCreater : EditorWindow
 	}
 	
 	private void OnShotRepaint(){
-		//defaultGraph.Play();
-		//defaultHumanoidGraph.Play();
+		defaultGraph.Play();
+		defaultHumanoidGraph.Play();
 		m_previewScene.Render();
 		Repaint();
 		if (m_playing) {m_playing = false;return;}
-		//defaultGraph.Stop();
-		//defaultHumanoidGraph.Stop();
+		defaultGraph.Stop();
+		defaultHumanoidGraph.Stop();
 		RepaintRenderBorder();
 		Debug.Log("ShotRepaint");
 		EditorApplication.update -= OnShotRepaint;
-		//m_didInitialize = true;
 	}
 	
 	private void RepaintRenderBorder(){
