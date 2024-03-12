@@ -282,13 +282,6 @@ public class FXCreater : EditorWindow
 	    };
 	    
 	    saveNewAnimationClipButton.clicked += () => {
-	    	//var NewClipPath = EditorUtility.SaveFilePanelInProject("Save new AnimationClip",$"{newAnimationName.value}","anim","",string.IsNullOrEmpty(m_folderPath_TextField.value) ? "Assets" : m_folderPath_TextField.value);
-	    	//if (string.IsNullOrEmpty(NewClipPath)) return;
-		    //var newClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(NewClipPath);
-	    	//if (newClip == null)
-	    	//{
-		    //	AssetDatabase.CreateAsset(newClip = new AnimationClip(),NewClipPath);	
-	    	//}
 	    	var newClip = AnimationClipsUtility.SaveNewClip(newAnimationName.value, m_folderPath_TextField.value);
 	    	if (newClip == null) return;
 	    	if (clips.Contains(newClip)) return;
