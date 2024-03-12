@@ -161,6 +161,7 @@ public class FXCreater : EditorWindow
 	void SetPreviewAvatar()
 	{
 		previewAvatarSMRs.Clear();
+		defaultPreviewAvatarObjectsIsActiveList.Clear();
 		foreach (var item in m_previewScene.Avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
 		{
 			previewAvatarSMRs.Add(item);
@@ -370,16 +371,23 @@ public class FXCreater : EditorWindow
 	    	else if (evt.button == 0)
 	    	{
 	    		m_selectObjectsList.Clear();
-	    		var mousePos = evt.localMousePosition;
-	    		mousePos.y = rect.height - mousePos.y;
-	    		Vector2 ratio = new Vector2(rect.width / m_previewScene.Camera.pixelWidth, rect.height / m_previewScene.Camera.pixelHeight);
-	    		mousePos.x /= ratio.x;
-	    		mousePos.y /= ratio.y;
+	    		var mousePos = evt.mousePosition;
+	    		//mousePos.y = rect.height - mousePos.y;
+	    		//Vector2 ratio = new Vector2(rect.width / m_previewScene.Camera.pixelWidth, rect.height / m_previewScene.Camera.pixelHeight);
+	    		//mousePos.x /= ratio.x;
+	    		//mousePos.y /= ratio.y;
+	    		
+	    		mousePos = mousePos - rect.min;
+	    		mousePos.y = rect.height - mousePos.y + m_previewScene.Camera.fieldOfView;
+	    		mousePos *= new Vector2(m_previewScene.Camera.pixelWidth, m_previewScene.Camera.pixelHeight) / rect.size;
+	    		//mousePos.y = m_previewScene.Camera.pixelHeight - mousePos.y;
+	    		Debug.Log(rect.min+","+rect.height);
+	    		
 	    		var ray = m_previewScene.Camera.ScreenPointToRay(mousePos);
 	    		var screneXRatio = m_previewScene.Camera.pixelWidth;
-	    		Debug.Log(ratio.x);
-	    		ray.origin = new Vector3(ray.origin.x/ratio.x*0.3f, ray.origin.y, ray.origin.z);
-	    		ray.direction = new Vector3(ray.direction.x/ratio.x*0.3f, ray.direction.y, ray.direction.z);
+	    		//Debug.Log(ratio.x);
+	    		ray.origin = new Vector3(ray.origin.x, ray.origin.y, ray.origin.z);
+	    		ray.direction = new Vector3(ray.direction.x, ray.direction.y, ray.direction.z);
 	    		Debug.DrawRay(ray.origin,ray.direction,Color.white,10f);
 	    		//var hit = new RaycastHit();
 	    		GameObject hit;
@@ -512,7 +520,8 @@ public class FXCreater : EditorWindow
 		}
 
 		AnimationPlayableUtilities.PlayClip(m_previewScene.Avatar.GetComponent<Animator>(),defaultclip,out defaultGraph);
-		AnimationPlayableUtilities.PlayClip(m_previewScene.Avatar.GetComponent<Animator>(),m_t_pose,out defaultHumanoidGraph);
+		clipPlayable = AnimationPlayableUtilities.PlayClip(m_previewScene.Avatar.GetComponent<Animator>(),m_t_pose,out defaultHumanoidGraph);
+		
 		if(clipsDropdown.index == 0)return;
 		
 		//削除したClipファイルにアクセスした時のダイアログ
@@ -531,7 +540,6 @@ public class FXCreater : EditorWindow
 		//graph.Play();
         	
 		clipPlayable = AnimationPlayableUtilities.PlayClip(m_previewScene.Avatar.GetComponent<Animator>(),clips.ElementAt(clipsDropdown.index - 1),out graph);
-		
 		playSlider.highValue = clips.ElementAt(clipsDropdown.index - 1).length;
 		    
 		playButton.value = true;

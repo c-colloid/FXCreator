@@ -95,6 +95,7 @@ public class PreviewScene : IDisposable
         
 		// Create RenderTexture if needed
 		if (!RenderTexture || RenderTexture.width != RenderTextureSize.x || RenderTexture.height != RenderTextureSize.y)
+		//if (!RenderTexture)
 		{
 			if (RenderTexture)
 			{
@@ -113,7 +114,9 @@ public class PreviewScene : IDisposable
 		Camera.Render();
 		Unsupported.useScriptableRenderPipeline = oldAllowPipes;
 
-		Camera.targetTexture = null;
+		//謎制御なのでコメントアウト
+		//Camera.targetTexture = null;
+		
 		// Restore RenderSettings
 		if (m_savedRenderSettings != null) {
 			Unsupported.RestoreOverrideLightingSettings();
