@@ -3,14 +3,8 @@
     "com.vrchat.core.vpm-resolver": {
       "version": "0.1.17"
     },
-    "lyuma.av3emulator": {
-      "version": "3.2.0"
-    },
     "vrchat.blackstartx.gesture-manager": {
       "version": "3.8.4"
-    },
-    "dev.vrlabs.av3manager": {
-      "version": "2.0.23"
     },
     "jp.lilxyzw.liltoon": {
       "version": "1.4.0"
@@ -26,6 +20,12 @@
     },
     "nadena.dev.modular-avatar": {
       "version": "1.8.4"
+    },
+    "lyuma.av3emulator": {
+      "version": "3.3.0"
+    },
+    "dev.vrlabs.av3manager": {
+      "version": "2.0.27"
     }
   },
   "locked": {
@@ -33,26 +33,14 @@
       "version": "0.1.27",
       "dependencies": {}
     },
-    "lyuma.av3emulator": {
-      "version": "3.2.2",
-      "dependencies": {
-        "com.vrchat.avatars": ">=3.1.0 <3.4.0"
-      }
-    },
     "vrchat.blackstartx.gesture-manager": {
       "version": "3.8.8",
       "dependencies": {
         "com.vrchat.avatars": "3.2.x || 3.3.x || 3.4.x || 3.5.x"
       }
     },
-    "dev.vrlabs.av3manager": {
-      "version": "2.0.25",
-      "dependencies": {
-        "com.vrchat.avatars": ">=3.2.0 < 3.5.0"
-      }
-    },
     "jp.lilxyzw.liltoon": {
-      "version": "1.6.0",
+      "version": "1.7.2",
       "dependencies": {}
     },
     "jp.lilxyzw.avatar-utils": {
@@ -70,14 +58,26 @@
       "dependencies": {}
     },
     "nadena.dev.ndmf": {
-      "version": "1.2.5",
+      "version": "1.3.6",
       "dependencies": {}
     },
     "nadena.dev.modular-avatar": {
-      "version": "1.8.4",
+      "version": "1.9.4",
       "dependencies": {
-        "com.vrchat.avatars": ">=3.2.0",
-        "nadena.dev.ndmf": ">=1.2.5 <2.0.0-a"
+        "com.vrchat.avatars": ">=3.4.0",
+        "nadena.dev.ndmf": ">=1.3.6 <2.0.0-a"
+      }
+    },
+    "lyuma.av3emulator": {
+      "version": "3.3.0",
+      "dependencies": {
+        "com.vrchat.avatars": ">=3.1.0 <3.6.0"
+      }
+    },
+    "dev.vrlabs.av3manager": {
+      "version": "2.0.27",
+      "dependencies": {
+        "com.vrchat.avatars": ">=3.2.0 < 3.6.0"
       }
     }
   }
