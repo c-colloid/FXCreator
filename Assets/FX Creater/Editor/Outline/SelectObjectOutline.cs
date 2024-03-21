@@ -15,13 +15,16 @@ public class SelectObjectOutline : IDisposable
 	private Renderer m_targetRenderer = null;
 	
 	public SelectObjectOutline(Camera camera){
+		m_camera = camera;
 		m_commandBuffer = new CommandBuffer();
 		m_commandBuffer.name = "Selective Outline";
 		
 		emissionMaterial = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath("ce5257b1d3b31b447ba7b81aef4971c2"));
 		outlineMaterial = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath("ca6c55819c35cb94eafd3b7a32a0434a"));
 		
+		
 		// ImageEffects前(OnRenderImageが呼ばれる前)に適用
+		camera.forceIntoRenderTexture = true;
 		camera.AddCommandBuffer(CameraEvent.BeforeImageEffects, m_commandBuffer);
 		
 		//m_targetRenderer = terget;
@@ -31,7 +34,7 @@ public class SelectObjectOutline : IDisposable
 		m_camera.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, m_commandBuffer);
 	}
 	
-	public void SetCommandBuffer(Renderer target)
+	public void SetCommandBuffer(Renderer target, int renderWidth = -1, int renderHeight = -1)
 	{
 		m_commandBuffer.Clear();
 		m_targetRenderer = target;
@@ -40,7 +43,8 @@ public class SelectObjectOutline : IDisposable
 		
 		// レンダリング結果を格納するテクスチャ作成
 		var id = Shader.PropertyToID("_OutlineTex");
-		m_commandBuffer.GetTemporaryRT(id, -1, -1, 24, FilterMode.Bilinear);
+		
+		m_commandBuffer.GetTemporaryRT(id, renderWidth, renderHeight, 24, FilterMode.Bilinear);
 		m_commandBuffer.SetRenderTarget(id);
 
 		// アウトラインを表示させたいメッシュの描画
@@ -49,5 +53,7 @@ public class SelectObjectOutline : IDisposable
 
 		// アウトラインを抽出して合成
 		m_commandBuffer.Blit(id, BuiltinRenderTextureType.CameraTarget, outlineMaterial);
+		
+		m_commandBuffer.ReleaseTemporaryRT(id);
 	}
 }
