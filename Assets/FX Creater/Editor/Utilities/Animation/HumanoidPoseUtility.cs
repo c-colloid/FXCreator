@@ -17,34 +17,34 @@ namespace colloid.FXCreater
 			return humanScale;
 		}
 		
-		//public static TransformAndQuaternion GetPoseFromRootPose(Avatar avatar_0, float float_0, AvatarIKGoal avatarIKGoal_0, TransformAndQuaternion sourcePose, TransformAndQuaternion targetPose)
-		//{
-		//	int num = (int)GetHumanBoneFromIKGoal(avatarIKGoal_0);
-
-		//	Quaternion rhs = GetPostRotation(avatar_0, num);
-		//	TransformAndQuaternion result = new TransformAndQuaternion(targetPose.vec, targetPose.quaternion * rhs);
-		//	if (avatarIKGoal_0 == AvatarIKGoal.LeftFoot || avatarIKGoal_0 == AvatarIKGoal.RightFoot)
-		//	{
-		//		float x = GetAxisLength(avatar_0, num);
-		//		Vector3 point = new Vector3(x, 0f, 0f);
-		//		result.vec += result.quaternion * point;
-		//	}
-		//	Quaternion quaternion = Quaternion.Inverse(sourcePose.quaternion);
-		//	result.vec = quaternion * (result.vec - sourcePose.vec);
-		//	result.quaternion = quaternion * result.quaternion;
-		//	result.vec /= float_0;
-			
-		//	return result;
-		//}
-		
 		public static TransformAndQuaternion GetPoseFromRootPose(Avatar avatar_0, float float_0, AvatarIKGoal avatarIKGoal_0, TransformAndQuaternion sourcePose, TransformAndQuaternion targetPose)
 		{
-			AnimationStream stream = new AnimationStream();
-			var humanstream = stream.AsHuman();
+			int num = (int)GetHumanBoneFromIKGoal(avatarIKGoal_0);
+
+			Quaternion rhs = GetPostRotation(avatar_0, num);
+			TransformAndQuaternion result = new TransformAndQuaternion(targetPose.vec, targetPose.quaternion * rhs);
+			if (avatarIKGoal_0 == AvatarIKGoal.LeftFoot || avatarIKGoal_0 == AvatarIKGoal.RightFoot)
+			{
+				float x = GetAxisLength(avatar_0, num);
+				Vector3 point = new Vector3(x, 0f, 0f);
+				result.vec += result.quaternion * point;
+			}
+			Quaternion quaternion = Quaternion.Inverse(sourcePose.quaternion);
+			result.vec = quaternion * (result.vec - sourcePose.vec);
+			result.quaternion = quaternion * result.quaternion;
+			result.vec /= float_0;
 			
-			var result = new TransformAndQuaternion(humanstream.GetGoalPositionFromPose(avatarIKGoal_0),humanstream.GetGoalRotationFromPose(avatarIKGoal_0));
 			return result;
 		}
+		
+		//public static TransformAndQuaternion GetPoseFromRootPose(Avatar avatar_0, float float_0, AvatarIKGoal avatarIKGoal_0, TransformAndQuaternion sourcePose, TransformAndQuaternion targetPose)
+		//{
+		//	AnimationStream stream = new AnimationStream();
+		//	var humanstream = stream.AsHuman();
+			
+		//	var result = new TransformAndQuaternion(humanstream.GetGoalPositionFromPose(avatarIKGoal_0),humanstream.GetGoalRotationFromPose(avatarIKGoal_0));
+		//	return result;
+		//}
 		
 		public static HumanBodyBones GetHumanBoneFromIKGoal(AvatarIKGoal avatarIKGoal_0)
 		{
