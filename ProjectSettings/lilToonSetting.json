@@ -37,6 +37,7 @@
     "LIL_FEATURE_AUDIOLINK_LOCAL": true,
     "LIL_FEATURE_DISSOLVE": true,
     "LIL_FEATURE_IDMASK": true,
+    "LIL_FEATURE_UDIMDISCARD": true,
     "LIL_FEATURE_DITHER": true,
     "LIL_FEATURE_ENCRYPTION": false,
     "LIL_FEATURE_ANIMATE_OUTLINE_UV": true,
@@ -66,6 +67,7 @@
     "LIL_FEATURE_ShadowColorTex": true,
     "LIL_FEATURE_Shadow2ndColorTex": true,
     "LIL_FEATURE_Shadow3rdColorTex": true,
+    "LIL_FEATURE_RimShadeMask": true,
     "LIL_FEATURE_BacklightColorTex": true,
     "LIL_FEATURE_SmoothnessTex": true,
     "LIL_FEATURE_MetallicGlossMap": true,
@@ -133,5 +135,5 @@
     "presetCloth": {
         "instanceID": 0
     },
-    "previousVersion": 39
+    "previousVersion": 43
 }
