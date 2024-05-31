@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/FX%20Creater/Editor/EyeJigglingGenerator/UIToolKit/EyeJiggleSettingEditor.uss?fileID=7433441132597879392&amp;guid=63c6700082b11014cbe0308afb195dfb&amp;type=3#EyeJiggleSettingEditor" />
+    <ui:BindableElement name="Container" class="reorderable-item" style="flex-direction: row;">
+        <ui:BindableElement name="BlendShapeSetting" style="flex-grow: 1;">
+            <ui:DropdownField label="ブレンドシェイプ" index="-1" choices="System.Collections.Generic.List`1[System.String]" binding-path="m_blendshape" name="BlendAnimeDropdownField" />
+            <uie:CurveField binding-path="m_animationcurve" name="BlendAnimeCurveField" />
+            <ui:Slider picking-mode="Ignore" value="0" high-value="100" style="opacity: 0.7; position: absolute; width: 100%; top: 22px;" />
+            <ui:MinMaxSlider min-value="0" max-value="5" low-limit="0" high-limit="10" focusable="false" picking-mode="Ignore" binding-path="m_timerClamp" style="opacity: 0.65;">
+                <ui:VisualElement name="DisableTouch" style="flex-grow: 1; position: absolute; width: 100%; height: 100%; display: none;" />
+            </ui:MinMaxSlider>
+        </ui:BindableElement>
+        <ui:Toggle name="BlendAnimeButton" binding-path="m_playbutton" class="Button" style="padding-left: 6px; padding-right: 6px; padding-top: 1px; padding-bottom: 1px; border-top-left-radius: 20px; border-bottom-left-radius: 20px; border-top-right-radius: 20px; border-bottom-right-radius: 20px; border-left-width: 1px; border-right-width: 1px; border-top-width: 1px; border-bottom-width: 1px; width: 30px; height: 30px; background-image: url(&apos;project://database/Assets/FX%20Creater/Editor/EyeJigglingGenerator/UIToolKit/UnityDefaultRuntimeTheme.tss?fileID=-1087164816274819069&amp;guid=6ffbb5f66679f5942a19d82acc20b1b2&amp;type=3#arrow-right@2x&apos;); -unity-slice-left: 5; align-self: center; flex-direction: column; align-items: center; justify-content: space-around; margin-bottom: 1px; margin-left: 3px; margin-right: 3px; margin-top: 1px;" />
+    </ui:BindableElement>
+</ui:UXML>

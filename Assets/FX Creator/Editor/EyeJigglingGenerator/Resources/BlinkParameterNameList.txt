@@ -1,0 +1,7 @@
+Blink
+//There are FaceEmo paramerter name.
+CN_BLINK_ENABLE
+SYNC_CN_FORCE_BLINK_DISABLE
+FaceEmo_CN_BLINK_ENABLE
+FaceEmo_SYNC_CN_FORCE_BLINK_DISABLE
+//If you want disable blink enforced, you have to add "_DISABLE" suffix in your parameters.

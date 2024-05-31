@@ -1,0 +1,33 @@
+{
+    "name": "EyeJigglingGenerator",
+    "rootNamespace": "",
+    "references": [
+        "GUID:62ced99b048af7f4d8dfe4bed8373d76",
+        "GUID:46b240ba6ff100649be07bf79579f8ac"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "VRCSDKBase.dll",
+        "VRCSDK3A.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [
+        {
+            "name": "nadena.dev.ndmf",
+            "expression": "1",
+            "define": "NDMF"
+        },
+        {
+            "name": "com.vrchat.base",
+            "expression": "1",
+            "define": "VRC"
+        }
+    ],
+    "noEngineReferences": false
+}

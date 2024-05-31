@@ -1,0 +1,25 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <Style src="project://database/Assets/FX%20Creater/Editor/EyeJigglingGenerator/UIToolKit/EyeJiggleSettingEditor.uss?fileID=7433441132597879392&amp;guid=63c6700082b11014cbe0308afb195dfb&amp;type=3#EyeJiggleSettingEditor" />
+    <ui:VisualElement style="flex-direction: row;">
+        <uie:ObjectField label="メッシュ" type="UnityEngine.SkinnedMeshRenderer, UnityEngine.CoreModule" binding-path="m_mesh" style="flex-shrink: 1; flex-grow: 2;" />
+        <ui:IntegerField value="1" label="layer" binding-path="m_layerIndex" style="flex-grow: 1;" />
+    </ui:VisualElement>
+    <ui:VisualElement class="reorderable-item">
+        <ui:DropdownField label="メイン ブレンドシェイプ" index="-1" binding-path="m_mainBlendShape" style="margin-right: 3px;" />
+        <uie:CurveField binding-path="m_animationCurve" name="CurveField" style="margin-right: 3px; border-top-left-radius: 10px; border-bottom-left-radius: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px;">
+            <ui:ProgressBar picking-mode="Ignore" style="position: absolute; flex-grow: 1; flex-shrink: 1; width: 100%; height: 100%; margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0; opacity: 0.7; display: none;" />
+        </uie:CurveField>
+        <ui:Slider value="0" high-value="100" picking-mode="Ignore" style="width: 100%; flex-shrink: 1; flex-grow: 1; padding-left: 3px; padding-right: 2px; margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; opacity: 0.75; -unity-background-image-tint-color: rgba(0, 0, 0, 0); background-color: rgba(0, 0, 0, 0); border-left-color: rgba(0, 0, 0, 0); border-right-color: rgba(0, 0, 0, 0); border-top-color: rgba(0, 0, 0, 0); border-bottom-color: rgba(0, 0, 0, 0); background-image: none; -unity-background-scale-mode: stretch-to-fill; display: flex; position: absolute; top: 23px;" />
+        <ui:MinMaxSlider picking-mode="Ignore" min-value="0" max-value="10" low-limit="0" high-limit="10" tooltip="再生時間" binding-path="m_timerClamp" style="flex-shrink: 1; flex-grow: 1; margin-left: 3px; margin-right: 3px;" />
+    </ui:VisualElement>
+    <uie:PropertyField binding-path="m_blendAnimations" label="アニメーション" style="display: none;" />
+    <ui:VisualElement name="List" class="sector" style="border-top-left-radius: 6px; border-bottom-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 6px; padding-left: 5px; padding-right: 5px; padding-top: 0;">
+        <ui:ListView focusable="true" horizontal-scrolling="false" show-foldout-header="true" header-title="ブレンド アニメーション" show-add-remove-footer="true" selection-type="Single" show-border="false" virtualization-method="DynamicHeight" fixed-item-height="40" binding-path="m_blendAnimations" show-alternating-row-backgrounds="ContentOnly" show-bound-collection-size="false" style="margin-left: 10px; margin-right: 1px; margin-top: 1px;" />
+    </ui:VisualElement>
+    <ui:VisualElement class="sector" style="flex-direction: row;">
+        <ui:Button text="Play" parse-escape-sequences="true" display-tooltip-when-elided="true" name="PlayButton" style="border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-top-right-radius: 8px; border-bottom-right-radius: 8px; flex-shrink: 1; flex-grow: 1;" />
+        <ui:Button text="Save" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SaveButton" style="border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-top-right-radius: 8px; border-bottom-right-radius: 8px; flex-shrink: 1;" />
+    </ui:VisualElement>
+    <ui:Foldout text="Default_Inspector" name="Default_Inspector" value="false" />
+    <ui:TextField picking-mode="Ignore" value="&lt;color=yellow&gt;&lt;b&gt;カーブを設定してください&lt;/b&gt;&lt;/color&gt;" multiline="true" readonly="true" name="ToolTips" style="-unity-font: url(&apos;project://database/Library/unity%20default%20resources?fileID=10102&amp;guid=0000000000000000e000000000000000&amp;type=0#LegacyRuntime&apos;); -unity-font-definition: initial; text-shadow: 1px 1px 1px rgb(82, 82, 82); letter-spacing: 5px; display: none; margin-right: 3px;" />
+</ui:UXML>

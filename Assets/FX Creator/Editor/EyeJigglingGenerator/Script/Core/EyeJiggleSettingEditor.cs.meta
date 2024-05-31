@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 78bdd4f7efc59df4e9426ec86c54835a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_custumEditor: {fileID: 9197481963319205126, guid: e539bcc972c18ba479440463ff487440,
+      type: 3}
+  - m_custumPropertyDrawer: {fileID: 9197481963319205126, guid: 6df24d700100e7c4e88968fa4535db23,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

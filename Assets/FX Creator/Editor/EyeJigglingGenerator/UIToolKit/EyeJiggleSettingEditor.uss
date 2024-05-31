@@ -1,0 +1,156 @@
+.sector {
+    background-color: var(--unity-colors-default-background);
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    margin-left: 1px;
+    margin-right: 1px;
+    margin-top: 1px;
+    margin-bottom: 1px;
+    border-left-color: var(--unity-colors-box-border);
+    border-right-color: var(--unity-colors-box-border);
+    border-top-color: var(--unity-colors-box-border);
+    border-bottom-color: var(--unity-colors-box-border);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+}
+
+.reorderable-item {
+    background-color: var(--unity-colors-button-background);
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--unity-colors-button-border);
+    border-right-color: var(--unity-colors-button-border);
+    border-top-color: var(--unity-colors-button-border);
+    border-bottom-color: var(--unity-colors-button-border);
+}
+
+.Button {
+    background-color: var(--unity-colors-button-background);
+}
+
+#BlendAnimeButton > .unity-toggle__input {
+    display: none;
+    visibility: visible;
+}
+
+.unity-toggle:hover {
+    background-color: var(--unity-colors-button-background-hover);
+    translate: 0 -1px;
+    scale: 1.01 1.01;
+    transition-duration: 0.2s;
+}
+
+.unity-toggle:active {
+    background-color: var(--unity-colors-button-background-pressed);
+    translate: 0 0.5px;
+    scale: 0.99 0.99;
+}
+
+.unity-toggle:hover:active {
+    background-color: var(--unity-colors-button-background-hover_pressed);
+}
+
+.unity-toggle:focus {
+    border-left-color: var(--unity-colors-button-border_accent-focus);
+    border-right-color: var(--unity-colors-button-border_accent-focus);
+    border-top-color: var(--unity-colors-button-border_accent-focus);
+    border-bottom-color: var(--unity-colors-button-border_accent-focus);
+    background-color: var(--unity-colors-button-background-focus);
+}
+
+.unity-toggle {
+    background-color: var(--unity-colors-button-background);
+    border-left-color: var(--unity-colors-button-border);
+    border-right-color: var(--unity-colors-button-border);
+    border-top-color: var(--unity-colors-button-border);
+    border-bottom-color: var(--unity-colors-button-border);
+}
+
+.unity-toggle:selected {
+    background-color: var(--unity-colors-button-background-focus);
+    border-left-color: var(--unity-colors-button-border_accent-focus);
+    border-right-color: var(--unity-colors-button-border_accent-focus);
+    border-top-color: var(--unity-colors-button-border_accent-focus);
+    border-bottom-color: var(--unity-colors-button-border_accent-focus);
+}
+
+.unity-curve-field {
+    border-top-left-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-right-radius: 7px;
+}
+
+.unity-integer-field__label {
+    min-width: auto;
+}
+
+#ToolTips > #unity-text-input {
+    background-color: var(--unity-colors-helpbox-background);
+    border-left-color: var(--unity-colors-helpbox-border);
+}
+
+.unity-progress-bar .unity-progress-bar__background {
+    background-color: rgba(0, 0, 0, 0);
+    border-left-color: rgba(0, 0, 0, 0);
+    border-right-color: rgba(0, 0, 0, 0);
+    border-top-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(0, 0, 0, 0);
+}
+
+.unity-progress-bar .unity-progress-bar__progress {
+    border-right-color: rgb(255, 255, 255);
+    background-color: rgba(0, 0, 0, 0);
+    border-right-width: 3px;
+}
+
+.unity-min-max-slider .unity-min-max-slider__dragger {
+    display: flex;
+    visibility: visible;
+    overflow: hidden;
+}
+
+.unity-slider .unity-base-slider__dragger {
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    background-image: none;
+    background-color: rgb(255, 255, 255);
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    width: 4px;
+    align-items: center;
+    justify-content: center;
+    height: 14px;
+    cursor: slide-arrow;
+}
+
+.unity-slider .unity-base-slider__tracker {
+    display: none;
+}
+
+.unity-slider .unity-base-slider__drag-container {
+    justify-content: center;
+    align-self: center;
+}
+
+.unity-slider .unity-base-slider__dragger-border {
+    width: 12px;
+}
