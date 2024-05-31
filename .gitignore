@@ -75,3 +75,7 @@ crashlytics-build.properties
 Assets/PackageMakerWindowData.asset*
 .idea
 .vscode
+/Assets/FX Creater/Editor/EyeJigglingGenerator
+Assets/FX Creater/Editor/EyeJigglingGenerator.meta
+/Assets/Mikozin_chan
+Assets/Mikozin_chan.meta
