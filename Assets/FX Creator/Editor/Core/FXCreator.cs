@@ -146,7 +146,7 @@ public class FXCreator : EditorWindow
     
 	VisualTreeAsset InitVTA()
 	{
-		var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/FX Creater/Editor/Core/FXCreator.uxml");
+		var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/FX Creator/Editor/Core/FXCreator.uxml");
 		return visualTree;
 	}
 #endregion
