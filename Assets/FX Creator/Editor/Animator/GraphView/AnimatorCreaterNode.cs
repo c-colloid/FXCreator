@@ -11,7 +11,8 @@ public class AnimatorCreaterNode : Node
 
     public AnimatorCreaterNode()
     {
-        capabilities |= Capabilities.Resizable;
+	    capabilities |= Capabilities.Resizable;
+	    this.style.width = 130;
 
 	    title = "Sample";
 
@@ -50,7 +51,7 @@ public class AnimatorCreaterNode : Node
 
             style.width = Mathf.Max(
                 Mathf.Floor(rect.width / GridSize) * GridSize,
-                MinimumSize.x
+	            MinimumSize.x
             );
             style.height = Mathf.Max(
                 Mathf.Floor(rect.height/ GridSize) * GridSize,
