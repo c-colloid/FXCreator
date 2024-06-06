@@ -9,10 +9,18 @@ GridBackground {
     --layer: 10
 } */
 
-#node-border {
+VisualElement #node-border {
 	flex-grow: 1
 }
 
+VisualElement #contents {
+	flex-grow: 0
+}
+
 #top {
+	flex-grow: 0
+}
+
+TemplateContainer {
 	flex-grow: 1
 }

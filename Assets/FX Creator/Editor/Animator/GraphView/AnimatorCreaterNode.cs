@@ -1,20 +1,49 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEditor;
 using UnityEditor.Experimental.GraphView;
+using UnityEditorInternal;
+using UnityEditor.UIElements;
+using UnityEditor.SceneManagement;
+using VRC.SDK3.Avatars.Components;
 
 public class AnimatorCreaterNode : Node
 {
+	[SerializeField]
+	VisualTreeAsset m_virtualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AssetDatabase.GUIDToAssetPath("32350547bc91dde4fb1d5c3aaf2b6d27"));
+	
 	private float GridSize = 20;
-    private Vector2 MinimumSize = new Vector2(10,20);
+	private Vector2 MinimumSize = new Vector2(200,100);
+    
+	Motion m_motion;
+	float m_speed,
+		m_speedMultiplier,
+		m_cycleOffset;
+	bool m_mittor,
+		m_footIK,
+		m_writeDefaults;
+	string m_motionTimeChoice;
+	List<string> m_motionTime = new List<string>();
+	List<UnityEditor.Animations.AnimatorTransition> m_transitions = new List<UnityEditor.Animations.AnimatorTransition>();
+	
+	float m_fieldsBackgroundHeight;
+	float m_settingsFieldsHeight = 123;
+	
+	PreviewRenderUtility m_preview = new PreviewRenderUtility();
+	GameObject m_targetGO;
+	Animator m_target;
+	float m_avatarEyesHight;
 
     public AnimatorCreaterNode()
     {
 	    capabilities |= Capabilities.Resizable;
 	    this.style.width = 130;
 
-	    title = "Sample";
+	    title = "";
+	    titleContainer.Insert(0,new TextField(){style = {flexGrow = 1, fontSize = 12}});
 
         var inputPort = Port.Create<Edge>(Orientation.Horizontal, Direction.Input, Port.Capacity.Single, typeof(Port));
 	    inputPort.portName = "In";
@@ -30,13 +59,91 @@ public class AnimatorCreaterNode : Node
 	    outputPort.portColor = Color.red;
 	    outputContainer.Add(outputPort);
         
-
-        var textField = new TextField();
+	    var UXML = m_virtualTreeAsset.Instantiate();
+	    mainContainer.Add(UXML);
+	    var background = UXML.Q<VisualElement>("FieldsBackground");
+	    var render = UXML.Q<VisualElement>("Render");
+	    var textField = UXML.Q<TextField>("FieldsTitle");
         textField.style.flexGrow = 1;
-        textField.multiline = true;
         textField.RegisterCallback<FocusInEvent>(evt => { Input.imeCompositionMode = IMECompositionMode.On; });
         textField.RegisterCallback<FocusOutEvent>(evt => { Input.imeCompositionMode = IMECompositionMode.Auto; });
-        this.mainContainer.Add(textField);
+	    //this.mainContainer.Add(textField);
+	    var motionField = UXML.Q<ObjectField>("Motion");
+	    motionField.RegisterValueChangedCallback(evt =>
+	    {
+	    	var newvalue = evt.newValue as Motion;
+	    	m_motion = newvalue;
+	    	
+	    	if (m_preview != null) m_preview.Cleanup();
+	    	m_preview = new PreviewRenderUtility();
+	    	var targetGO = EditorSceneManager.GetActiveScene().GetRootGameObjects().Single(obj => obj.TryGetComponent<Animator>(out var target));
+	    	targetGO = GameObject.Instantiate(targetGO);
+	    	targetGO.hideFlags = HideFlags.HideAndDontSave;
+	    	
+	    	m_preview.AddSingleGO(targetGO);
+	    	PlayClipWithAnimationMode(targetGO);
+	    	
+	    	var target = targetGO.GetComponent<Animator>();
+	    	var animator = new UnityEditor.Animations.AnimatorController();
+	    	
+	    	var avatar = targetGO.GetComponent<VRCAvatarDescriptor>();
+	    	
+	    	m_targetGO = targetGO;
+	    	m_target = target;
+	    	m_avatarEyesHight = avatar.ViewPosition.y;
+	    	
+	    	var camera = m_preview.camera;
+	    	camera.transform.position = new Vector3(0,m_avatarEyesHight,0.6f);
+	    	camera.transform.rotation = Quaternion.identity * Quaternion.Euler(0,180,0);
+	    	camera.fieldOfView = 30;
+	    	camera.nearClipPlane = 0.3f;
+	    	
+	    	RepaintPreview();
+	    	
+	    });
+	    //mainContainer.Add(motionField);
+	    var settingsField = UXML.Q<Foldout>("Settings");
+	    settingsField.RegisterValueChangedCallback(evt =>
+	    {
+	    	var toggle = evt.newValue;
+	    	toggleFields(toggle, settingsField.Q<VisualElement>("unity-content"), ref m_settingsFieldsHeight);
+	    });
+	    settingsField.value = false;
+	    var speedField = UXML.Q<FloatField>("Speed");
+	    speedField.RegisterValueChangedCallback(evt =>
+	    {
+	    	var newvalue = evt.newValue;
+	    	m_speed = newvalue;
+	    });
+	    //mainContainer.Add(speedField);
+	    var motionTimeField = UXML.Q<DropdownField>("MotionTime");
+	    motionTimeField.choices = m_motionTime;
+	    motionTimeField.RegisterValueChangedCallback(evt =>
+	    {
+	    	var newvalue = evt.newValue;
+	    	m_motionTimeChoice = newvalue;
+	    });
+	    //mainContainer.Add(motionTimeField);
+	    var writeDefaultsField = UXML.Q<Toggle>("WriteDefaults");
+	    writeDefaultsField.RegisterValueChangedCallback(evt =>
+	    {
+	    	var newvalue = evt.newValue;
+	    	m_writeDefaults = newvalue;
+	    });
+	    //mainContainer.Add(writeDefaultsField);
+	    var transitionsField = UXML.Q<ListView>("Transitions");
+	    transitionsField.itemsSource = m_transitions;
+	    //mainContainer.Add(transitionsField);
+	    var toggleFieldsButton = UXML.Q<Button>("ToggleFields");
+	    toggleFieldsButton.clicked += () => {
+	    	background.style.display = toggleFields(background.style.display == DisplayStyle.None, background, ref m_fieldsBackgroundHeight);
+	    };
+	    var cameraTargetField = UXML.Q<EnumField>("CameraTarget");
+	    cameraTargetField.RegisterValueChangedCallback(evt =>
+	    {
+	    	var newEnum = (HumanBodyBones)evt.newValue;
+	    	RepaintPreview(newEnum);
+	    });
 
         RegisterCallback<GeometryChangedEvent>(evt =>{
             var rect = evt.newRect;
@@ -57,6 +164,60 @@ public class AnimatorCreaterNode : Node
                 Mathf.Floor(rect.height/ GridSize) * GridSize,
                 MinimumSize.y
             );
+            
+	        RepaintPreview();
         });
+        
+	    RegisterCallback<DetachFromPanelEvent>(evt =>{
+	    	AnimationMode.StopAnimationMode();
+	    	m_preview.Cleanup();
+	    	EditorApplication.update -= UpdateAnimation;
+	    });
     }
+    
+	void PlayClipWithAnimationMode(GameObject target = null, AnimationClip clip = null, float time = 0f)
+	{
+		if (target == null && m_targetGO == null) return;
+		if (target == null)
+			target = m_targetGO;
+		if (m_motion.GetType() != typeof(AnimationClip)) return;
+		if (clip == null)
+			clip = m_motion as AnimationClip;
+		
+		AnimationMode.StartAnimationMode();
+		AnimationMode.BeginSampling();
+		AnimationMode.SampleAnimationClip(target,clip,time);
+		AnimationMode.EndSampling();
+	}
+    
+	void UpdateAnimation()
+	{
+		m_target.Update(Time.deltaTime);
+		RepaintPreview();
+	}
+	
+	void RepaintPreview(HumanBodyBones cameraYtarget = HumanBodyBones.Head)
+	{
+		m_preview.camera.transform.position = new Vector3(0,
+			m_target == null ? 0.5f :
+			m_target.GetBoneTransform(cameraYtarget).position.y,
+			0.6f);
+		var render = this.Q<VisualElement>("Render");
+		if (render.layout.height <= 0) return;
+		m_preview.BeginPreview(new Rect(render.layout), GUIStyle.none);
+		m_preview.Render();
+		var tex = m_preview.EndPreview();
+		render.style.backgroundImage = Background.FromRenderTexture(tex as RenderTexture);
+	}
+    
+	DisplayStyle toggleFields(bool current, VisualElement target, ref float heightvariavle)
+	{
+		var currentHeight = this.layout.height;
+		if (!current) heightvariavle = target.layout.height;
+		currentHeight += current ?
+			Mathf.Round(heightvariavle/ GridSize) * GridSize :
+			Mathf.Round(-heightvariavle/ GridSize) * GridSize;
+		this.style.height = currentHeight;
+		return current ? DisplayStyle.Flex : DisplayStyle.None;
+	}
 }

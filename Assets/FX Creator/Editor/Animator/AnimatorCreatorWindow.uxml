@@ -11,7 +11,7 @@
             <uie:Toolbar name="Toolbar" style="flex-shrink: 1; justify-content: space-between;">
                 <uie:ToolbarButton parse-escape-sequences="true" display-tooltip-when-elided="true" name="EnableTwoPanel" class="custom-ToolbarInActiveButton" style="width: 25px; display: none; justify-content: center; border-left-width: 0;" />
             </uie:Toolbar>
-            <ui:VisualElement name="Background" class="custom-Background" style="flex-grow: 1; background-image: url(&quot;project://database/Assets/FX%20Creator/Editor/Resouse/12140.jpg?fileID=2800000&amp;guid=c854fe7c954040048b8ebd51858dcc9d&amp;type=3#12140&quot;);">
+            <ui:VisualElement name="Background" class="custom-Background" style="flex-grow: 1; background-color: rgb(255, 255, 255);">
                 <Shadow shadow-scale="1.1" shadow-corner-radius="20" shadow-side="Inside" style="flex-grow: 1; overflow: hidden; color: rgb(11, 0, 255);">
                     <ui:VisualElement name="StateMachineContainer" style="flex-grow: 1; flex-shrink: 0; background-color: rgba(0, 0, 0, 0.22); display: none;" />
                 </Shadow>

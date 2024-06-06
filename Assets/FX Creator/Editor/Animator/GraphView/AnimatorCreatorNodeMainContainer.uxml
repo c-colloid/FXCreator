@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <ui:VisualElement name="FieldsBackground" style="background-color: rgb(43, 43, 43); overflow: hidden;">
+        <ui:TextField picking-mode="Ignore" name="FieldsTitle" />
+        <uie:ObjectField type="UnityEngine.Motion, UnityEngine.AnimationModule" binding-path="m_motion" name="Motion" />
+        <ui:Foldout text="Settings" name="Settings">
+            <ui:FloatField label="Speed" value="1" binding-path="m_speed" name="Speed" />
+            <ui:DropdownField label="MotionTime" name="MotionTime" choices="None" binding-path="m_motionTime" index="0" />
+            <ui:FloatField label="motionTime" value="0" binding-path="m_MotionTime" name="MotionTime" style="display: none;" />
+            <ui:Toggle label="Write Defaults" binding-path="m_writeDefaults" name="WriteDefaults" />
+            <ui:ListView binding-path="m_transitions" show-foldout-header="true" show-add-remove-footer="true" header-title="Transitions" name="Transitions" />
+        </ui:Foldout>
+        <ui:EnumField label="Camera Target" type="UnityEngine.HumanBodyBones, UnityEngine.AnimationModule" value="Head" name="CameraTarget" style="align-self: flex-start;" />
+    </ui:VisualElement>
+    <ui:VisualElement name="Render" style="flex-grow: 1; background-color: rgb(142, 142, 142);" />
+    <ui:Button text="V" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ToggleFields" />
+</ui:UXML>
