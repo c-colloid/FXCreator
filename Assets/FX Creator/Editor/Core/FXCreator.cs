@@ -287,7 +287,11 @@ public class FXCreator : EditorWindow
 	    Rect rect = new Rect();
 	    render.RegisterCallback<GeometryChangedEvent>(evt => {
 	    	rect = render.contentRect;
-		    rect = new Rect(0,0,rect.width,rect.height);
+		    rect = new Rect(0,0,rect.width * EditorGUIUtility.pixelsPerPoint,rect.height * EditorGUIUtility.pixelsPerPoint);
+		    m_previewScene.RenderTextureSize = Vector2Int.RoundToInt(rect.size);
+		    m_previewScene.Camera.rect = rect;
+		    m_previewScene.Render();
+		    render.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(m_previewScene.RenderTexture));
 	    });
 	    
 	    render.RegisterCallback<MouseDownEvent>(evt => {
