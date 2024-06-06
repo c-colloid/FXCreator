@@ -114,6 +114,7 @@ public class PreviewScene : IDisposable
 		Unsupported.useScriptableRenderPipeline = oldAllowPipes;
 
 		Camera.targetTexture = null;
+		
 		// Restore RenderSettings
 		if (m_savedRenderSettings != null) {
 			Unsupported.RestoreOverrideLightingSettings();
