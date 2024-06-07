@@ -43,7 +43,40 @@ public class AnimatorCreaterNode : Node
 	    this.style.width = 130;
 
 	    title = "";
-	    titleContainer.Insert(0,new TextField(){style = {flexGrow = 1, fontSize = 12}});
+	    var titleTextField = new TextField(){style = {display = DisplayStyle.None, flexGrow = 1, fontSize = 12}};
+	    titleTextField.RegisterCallback<KeyDownEvent>(evt =>
+	    {
+	    	if (evt.keyCode != KeyCode.Return) return;
+	    	title = titleTextField.value;
+	    	titleTextField.style.display = DisplayStyle.None;
+	    	titleContainer.Q<Label>().style.flexGrow = 1;
+		    titleContainer.Q<Label>().style.display = DisplayStyle.Flex;
+	    });
+	    titleTextField.RegisterCallback<FocusOutEvent>(evt =>{
+	    	title = titleTextField.value;
+	    	titleTextField.style.display =
+		    	DisplayStyle.None;
+	    	titleContainer.Q<Label>().style.flexGrow = 1;
+		    titleContainer.Q<Label>().style.display = 
+		    	DisplayStyle.Flex;
+	    });
+	    titleContainer.Insert(0, titleTextField);
+	    titleContainer.Q<Label>().style.flexGrow = 1;
+	    titleContainer.Q<Label>().enableRichText = true;
+	    titleContainer.RegisterCallback<MouseDownEvent>(evt =>
+	    {
+	    	if (evt.button != 0 || evt.clickCount != 2) return;
+	    	titleTextField.style.display =
+		    	titleTextField.style.display == DisplayStyle.None ?
+		    	DisplayStyle.Flex :
+		    	DisplayStyle.None;
+	    	titleTextField.Focus();
+	    	titleContainer.Q<Label>().style.flexGrow = titleTextField.style.display == DisplayStyle.None ?
+		    	1 : 0;
+		    titleContainer.Q<Label>().style.display = titleTextField.style.display == DisplayStyle.None ?
+		    	DisplayStyle.Flex :
+		    	DisplayStyle.None;
+	    });
 
         var inputPort = Port.Create<Edge>(Orientation.Horizontal, Direction.Input, Port.Capacity.Single, typeof(Port));
 	    inputPort.portName = "In";
@@ -63,10 +96,10 @@ public class AnimatorCreaterNode : Node
 	    mainContainer.Add(UXML);
 	    var background = UXML.Q<VisualElement>("FieldsBackground");
 	    var render = UXML.Q<VisualElement>("Render");
-	    var textField = UXML.Q<TextField>("FieldsTitle");
-        textField.style.flexGrow = 1;
-        textField.RegisterCallback<FocusInEvent>(evt => { Input.imeCompositionMode = IMECompositionMode.On; });
-        textField.RegisterCallback<FocusOutEvent>(evt => { Input.imeCompositionMode = IMECompositionMode.Auto; });
+	    //var textField = UXML.Q<TextField>("FieldsTitle");
+        //textField.style.flexGrow = 1;
+        //textField.RegisterCallback<FocusInEvent>(evt => { Input.imeCompositionMode = IMECompositionMode.On; });
+        //textField.RegisterCallback<FocusOutEvent>(evt => { Input.imeCompositionMode = IMECompositionMode.Auto; });
 	    //this.mainContainer.Add(textField);
 	    var motionField = UXML.Q<ObjectField>("Motion");
 	    motionField.RegisterValueChangedCallback(evt =>
@@ -105,6 +138,7 @@ public class AnimatorCreaterNode : Node
 	    var settingsField = UXML.Q<Foldout>("Settings");
 	    settingsField.RegisterValueChangedCallback(evt =>
 	    {
+	    	if (evt.target != settingsField) return;
 	    	var toggle = evt.newValue;
 	    	toggleFields(toggle, settingsField.Q<VisualElement>("unity-content"), ref m_settingsFieldsHeight);
 	    });
@@ -133,6 +167,7 @@ public class AnimatorCreaterNode : Node
 	    //mainContainer.Add(writeDefaultsField);
 	    var transitionsField = UXML.Q<ListView>("Transitions");
 	    transitionsField.itemsSource = m_transitions;
+	    //transitionsField.itemsAdded(BindNewOutPutPort);
 	    //mainContainer.Add(transitionsField);
 	    var toggleFieldsButton = UXML.Q<Button>("ToggleFields");
 	    toggleFieldsButton.clicked += () => {
@@ -174,6 +209,14 @@ public class AnimatorCreaterNode : Node
 	    	EditorApplication.update -= UpdateAnimation;
 	    });
     }
+    
+	void BindNewOutPutPort(string name = "Out",Color color = new Color())
+	{
+		var outputPort = Port.Create<Edge>(Orientation.Vertical, Direction.Output, Port.Capacity.Multi, typeof(Port));
+		outputPort.portName = name;
+		outputPort.portColor = color;
+		outputContainer.Add(outputPort);
+	}
     
 	void PlayClipWithAnimationMode(GameObject target = null, AnimationClip clip = null, float time = 0f)
 	{
