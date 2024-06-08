@@ -42,7 +42,7 @@ public class AnimatorCreatorNode : Node
 	    capabilities |= Capabilities.Resizable;
 	    this.style.width = 130;
 
-	    title = "";
+	    title = "Title";
 	    var titleTextField = new TextField(){style = {display = DisplayStyle.None, flexGrow = 1, fontSize = 12}};
 	    titleTextField.RegisterCallback<KeyDownEvent>(evt =>
 	    {
@@ -66,6 +66,7 @@ public class AnimatorCreatorNode : Node
 	    titleContainer.RegisterCallback<MouseDownEvent>(evt =>
 	    {
 	    	if (evt.button != 0 || evt.clickCount != 2) return;
+	    	titleTextField.value = title;
 	    	titleTextField.style.display =
 		    	titleTextField.style.display == DisplayStyle.None ?
 		    	DisplayStyle.Flex :
