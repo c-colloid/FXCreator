@@ -38,7 +38,7 @@ public class AnimatorCreatorGraph : GraphView
 
 		nodeCreationRequest += Context =>
 		{
-			AddElement(new AnimatorCreaterNode(){
+			AddElement(new AnimatorCreatorNode(){
 				style = {left = mousePos.x, top = mousePos.y, width = 200, height = 300}
 			});
 		};

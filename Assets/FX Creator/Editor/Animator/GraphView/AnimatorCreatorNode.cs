@@ -10,7 +10,7 @@ using UnityEditor.UIElements;
 using UnityEditor.SceneManagement;
 using VRC.SDK3.Avatars.Components;
 
-public class AnimatorCreaterNode : Node
+public class AnimatorCreatorNode : Node
 {
 	[SerializeField]
 	VisualTreeAsset m_virtualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AssetDatabase.GUIDToAssetPath("32350547bc91dde4fb1d5c3aaf2b6d27"));
@@ -37,7 +37,7 @@ public class AnimatorCreaterNode : Node
 	Animator m_target;
 	float m_avatarEyesHight;
 
-    public AnimatorCreaterNode()
+    public AnimatorCreatorNode()
     {
 	    capabilities |= Capabilities.Resizable;
 	    this.style.width = 130;
