@@ -170,12 +170,20 @@ public class AnimatorCreatorNode : Node
 	    transitionsField.itemsSource = m_transitions;
 	    transitionsField.itemsAdded += (ItemList) => 
 	    {
-	    	if (outputContainer.childCount > ItemList.Last()) return;
-	    	BindNewOutPutPort(Color.red);
+	    	//if (outputContainer.childCount > ItemList.Last()) return;
+	    	foreach (var item in ItemList)
+	    	{
+	    		if (outputContainer.childCount > item) continue;
+	    		BindNewOutPutPort(Color.red);
+	    	}
 	    };
 	    transitionsField.itemsRemoved += (ItemList) => 
 	    {
-	    	outputContainer.RemoveAt(ItemList.Count() - 1);
+	    	foreach (var item in Enumerable.Reverse(ItemList))
+	    	{
+	    		Debug.Log(item);
+	    		outputContainer.RemoveAt(item);
+	    	}
 	    };
 	    //mainContainer.Add(transitionsField);
 	    var toggleFieldsButton = UXML.Q<Button>("ToggleFields");
