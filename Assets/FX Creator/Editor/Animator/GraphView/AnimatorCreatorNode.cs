@@ -170,7 +170,6 @@ public class AnimatorCreatorNode : Node
 	    transitionsField.itemsSource = m_transitions;
 	    transitionsField.itemsAdded += (ItemList) => 
 	    {
-	    	//if (outputContainer.childCount > ItemList.Last()) return;
 	    	foreach (var item in ItemList)
 	    	{
 	    		if (outputContainer.childCount > item) continue;
