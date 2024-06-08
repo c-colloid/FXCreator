@@ -167,7 +167,15 @@ public class AnimatorCreatorNode : Node
 	    //mainContainer.Add(writeDefaultsField);
 	    var transitionsField = UXML.Q<ListView>("Transitions");
 	    transitionsField.itemsSource = m_transitions;
-	    //transitionsField.itemsAdded(BindNewOutPutPort);
+	    transitionsField.itemsAdded += (ItemList) => 
+	    {
+	    	if (outputContainer.childCount > ItemList.Last()) return;
+	    	BindNewOutPutPort(Color.red);
+	    };
+	    transitionsField.itemsRemoved += (ItemList) => 
+	    {
+	    	outputContainer.RemoveAt(ItemList.Count() - 1);
+	    };
 	    //mainContainer.Add(transitionsField);
 	    var toggleFieldsButton = UXML.Q<Button>("ToggleFields");
 	    toggleFieldsButton.clicked += () => {
@@ -216,6 +224,11 @@ public class AnimatorCreatorNode : Node
 		outputPort.portName = name;
 		outputPort.portColor = color;
 		outputContainer.Add(outputPort);
+	}
+	
+	void BindNewOutPutPort(Color color)
+	{
+		BindNewOutPutPort("Out",color);
 	}
     
 	void PlayClipWithAnimationMode(GameObject target = null, AnimationClip clip = null, float time = 0f)
