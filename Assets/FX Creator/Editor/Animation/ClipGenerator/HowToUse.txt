@@ -1,0 +1,7 @@
+1.　AnimationClipを作成したいオブジェクトを選択して右クリック
+2.　ClipGenのメニューからGameObjectかComponentかを選択
+3.　保存したい場所と名前を設定して保存
+4.　オン/オフアニメーションの両方が生成されたことを確認
+
+オプション
+・Tools/ClipGen/Settings内に設定があります
