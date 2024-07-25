@@ -4,16 +4,18 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
-using System.Text;
 using colloid.FXCreator.Animation.Utility;
 
 namespace colloid.FXCreator.Animation
 {
 	public class ToggleClip
 	{
-		const string m_menuItem = "ClipGen";
-		const string m_skinnedMeshRendererMenuItem = "GameObject/" + m_menuItem + "/Compornent/" + nameof(SkinnedMeshRenderer);
-		const string m_meshRendererMenuItem = "GameObject/" + m_menuItem + "/Compornent/" + nameof(MeshRenderer);
+		public const string m_menuItem = "ClipGen";
+		public const string m_componentMenuItemPath = nameof(GameObject) + "/" + m_menuItem + "/" + nameof(Component) + "/";
+		
+		const string m_skinnedMeshRendererMenuItem = m_componentMenuItemPath + nameof(SkinnedMeshRenderer);
+		const string m_meshRendererMenuItem = m_componentMenuItemPath + nameof(MeshRenderer);
+		
 		const string m_saveDialogTitle = "Save AnimationClip";
 		const string m_saveDialogMessage = "Please select save folder.";
 		
@@ -22,10 +24,10 @@ namespace colloid.FXCreator.Animation
 		static bool m_settingsSetPrefix = true;
 		const string m_settingsSetPrefixMenuItem = "Tools/" + m_menuItem + "/Settings/ClipName/SetPrefix-(ClipGen)";
 		static bool m_settingsSetSuffix = true;
-		const string m_settingsSetSuffixMenuItem = "Tools/" + m_menuItem + "/Settings/ClipName/SetSuffix";
+		const string m_settingsSetSuffixMenuItem = "Tools/" + m_menuItem + "/Settings/ClipName/SetSuffix--Type-";
 		static bool m_init = false;
 		
-		[MenuItem(m_menuItem ,menuItem = "GameObject/" + m_menuItem + "/GameObject", priority = 1000)]
+		[MenuItem(m_menuItem ,menuItem = nameof(GameObject) + "/" + m_menuItem + "/" + nameof(GameObject), priority = 1000)]
 		static void GenerateGameObjectClip()
 		{
 			GenerateToggelGameObjectsClip(Selection.gameObjects);
@@ -57,6 +59,10 @@ namespace colloid.FXCreator.Animation
 			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<MeshRenderer>()));
 		}
 		
+		/// <summary>
+		/// Settings
+		/// </summary>
+		/// <returns></returns>
 		[MenuItem(m_menuItem ,validate = true ,menuItem = m_settingsSetPrefixMenuItem)]
 		static bool ValidateSettingsSetPrefix()
 		{
@@ -89,6 +95,10 @@ namespace colloid.FXCreator.Animation
 			EditorUserSettings.SetConfigValue(m_settingsSetSuffixMenuItem,m_settingsSetSuffix.ToString());
 		}
 		
+		/// <summary>
+		/// Initialize MenuItem Settings
+		/// </summary>
+		/// <returns></returns>
 		[MenuItem("Tools/"+m_menuItem +"/Init" ,validate = true)][MenuItem("GameObject/"+m_menuItem+"/Init" ,validate = true)]
 		static bool ValidateInitSettings()
 		{
@@ -96,10 +106,7 @@ namespace colloid.FXCreator.Animation
 			return false;
 		}
 		[MenuItem("Tools/"+m_menuItem+"/Init")][MenuItem("GameObject/"+m_menuItem+"/Init")]
-		static void InitSettings()
-		{
-			
-		}
+		static void InitSettings(){}
 		
 		static void Init()
 		{
@@ -137,7 +144,7 @@ namespace colloid.FXCreator.Animation
 			selections.ToList().ForEach(o => GenerateToggleActiveComponentClip(o));
 		}
 		
-		static void GenerateToggelActiveComponentsClip(IEnumerable<Component> selections)
+		public static void GenerateToggelActiveComponentsClip(IEnumerable<Component> selections)
 		{
 			selections.ToList().ForEach(o => GenerateToggleActiveComponentClip(o));
 		}
