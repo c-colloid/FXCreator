@@ -198,7 +198,10 @@ EditorUserSettings:
       value: 184c
       flags: 0
     Tools/ClipGen/Settings/ClipName/SetPrefix-(ClipGen):
-      value: 2550581500
+      value: 37434103
+      flags: 0
+    Tools/ClipGen/Settings/ClipName/SetSuffix:
+      value: 37434103
       flags: 0
     UIBuilder.DisableMouseWheelZooming:
       value: 2550581500
