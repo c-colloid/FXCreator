@@ -5,3 +5,5 @@
 
 オプション
 ・Tools/ClipGen/Settings内に設定があります
+	-ClipName：接頭辞(Prefix)・接尾辞(Suffix)のオンオフを制御
+	-GenerateScript：未対応Componentのコンテキストメニューを生成
