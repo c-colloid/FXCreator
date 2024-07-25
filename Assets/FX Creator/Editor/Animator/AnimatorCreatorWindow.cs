@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
+using UnityEditor.Experimental.GraphView;
 
 public class AnimatorCreatorWindow : EditorWindow
 {
@@ -10,6 +11,10 @@ public class AnimatorCreatorWindow : EditorWindow
 	[SerializeField]
 	StyleSheet m_StyleSheet = default;
 	AnimatorCreatorRootManipulator m_rootManipulator = default;
+	
+	AnimatorCreatorGraph graphView;
+	ObjectField m_objectField;
+	public AnimatorCreatorData AnimatorCreatorData { get { return (AnimatorCreatorData)m_objectField.value; } }
 
 	[MenuItem("Window/UI Toolkit/AnimatorCreatorWindow")]
 	[MenuItem("Tools/FXCreator/AnimatorCreater",priority = 1001)]
@@ -77,4 +82,75 @@ public class AnimatorCreatorWindow : EditorWindow
 			GetDefaultUSS.DefaultCommonDarkStyleSheet :
 			GetDefaultUSS.DefaultCommonLightStyleSheet);
 	}
+	
+	// void LoadData()
+	// {
+	// 	if (AnimatorCreatorData == null) return;
+
+	// 	graphView.DeleteAllElements();
+
+	// 	foreach (var nodeData in AnimatorCreatorData.nodeData_list)
+	// 	{
+	// 		graphView.LoadNodeData(nodeData);
+	// 	}
+	// 	foreach (var edgeData in AnimatorCreatorData.edgeData_list)
+	// 	{
+	// 		graphView.LoadEdgeData(edgeData);
+	// 	}
+
+	// 	Debug.Log($"ロード完了");
+	// }
+
+	// void SaveData()
+	// {
+	// 	if (AnimatorCreatorData == null) return;
+
+	// 	AnimatorCreatorData.nodeData_list.Clear();
+	// 	AnimatorCreatorData.edgeData_list.Clear();
+
+	// 	foreach (var graphElement in graphView.graphElements)
+	// 	{
+	// 		if (graphElement is Node) SaveData_Node(graphElement);
+	// 		else if (graphElement is Edge) SaveData_Edge(graphElement);
+	// 		else Debug.LogWarning($"Find a non-surported graphElement type: {graphElement.GetType()}");
+	// 	}
+
+	// 	EditorUtility.SetDirty(m_objectField.value);
+	// 	AssetDatabase.SaveAssets();
+
+	// 	Debug.Log($"保存完了");
+	// }
+
+	// void SaveData_Node(GraphElement _graphElement)
+	// {
+	// 	Node node = _graphElement as Node;
+	// 	NodeData nodeData = new NodeData()
+	// 	{
+	// 		uid = node.uid,
+	// 		nodeType_str = node.GetType().ToString(),
+	// 		localBound = node.localBound
+	// 	};
+	// 	AnimatorCreatorData.nodeData_list.Add(nodeData);
+	// }
+
+	// void SaveData_Edge(GraphElement _graphElement)
+	// {
+	// 	Edge edge = _graphElement as Edge;
+
+	// 	Port inputPort = edge.input;
+	// 	Port outputPort = edge.output;
+	// 	Node inputNode = edge.input.node as Node;
+	// 	Node outputNode = edge.output.node as Node;
+	// 	string uid_inputPort_target = inputNode.port_dict.FirstOrDefault(x => x.Value.Equals(inputPort)).Key;
+	// 	string uid_outputPort_target = outputNode.port_dict.FirstOrDefault(x => x.Value.Equals(outputPort)).Key;
+
+	// 	EdgeData edgeData = new EdgeData()
+	// 	{
+	// 		uid_outputNode = outputNode.uid,
+	// 		uid_outputPort = uid_outputPort_target,
+	// 		uid_inputNode = inputNode.uid,
+	// 		uid_inputPort = uid_inputPort_target
+	// 	};
+	// 	AnimatorCreatorData.edgeData_list.Add(edgeData);
+	// }
 }
