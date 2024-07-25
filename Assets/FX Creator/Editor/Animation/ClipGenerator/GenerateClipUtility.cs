@@ -26,13 +26,12 @@ namespace colloid.FXCreator.Animation.Utility
 			var clip = new AnimationClip();
 			var KeyValue = 0f;
 			var Key = new Keyframe(0f,KeyValue);
-			var Curve = new AnimationCurve(Key);
+			var Curve = new AnimationCurve();
 			//GameObjectアニメーション
 			KeyValue = Convert.ToInt16(Target.GetType() == typeof(GameObject) ? Boolen
 				: Target is Component ? Boolen
 				: Boolen);
 			Key.value = KeyValue;
-			Curve.ClearKeys();
 			Curve.AddKey(Key);
 			clip.SetCurve(TargetPath,
 				Target.GetType(),
