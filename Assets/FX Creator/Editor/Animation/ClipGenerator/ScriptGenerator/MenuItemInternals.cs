@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if UNITY_2022_3_OR_NEWER
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
@@ -58,3 +59,4 @@ static class MenuItemInternals
 		if (s_ScriptingMenuItem_priority == null) Debug.LogError("(Editor) s_ScriptingMenuItem_priority == null");
 	}
 }
+#endif

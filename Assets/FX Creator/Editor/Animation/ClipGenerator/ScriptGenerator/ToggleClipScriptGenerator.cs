@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿#if UNITY_2022_3_OR_NEWER
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
@@ -119,3 +118,4 @@ static void Generate#m_component#Clip()
 		}
 	}
 }
+#endif
