@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEditor;
 using System.Linq;
 using VRC.SDK3.Dynamics.PhysBone.Components;
+using VRC.SDK3.Avatars.Components;
+
 
 namespace colloid.FXCreator.Animation
 {
@@ -25,7 +27,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_VRCPhysBoneContextMenuItem)]
 		static void GenerateVRCPhysBoneClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<VRCPhysBone>()));
+			OnceFilter(() =>
+			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<VRCPhysBone>())));
 		}
 		
 		const string m_VRCPhysBoneColliderMenuItem = m_componentMenuItemPath + "VRChat/" + nameof(VRCPhysBoneCollider);
@@ -43,7 +46,9 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_VRCPhysBoneColliderContextMenuItem)]
 		static void GenerateVRCPhysBoneColliderClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<VRCPhysBoneCollider>()));
+			OnceFilter(() =>
+			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<VRCPhysBoneCollider>())));
+		}
 		}
 	}
 }

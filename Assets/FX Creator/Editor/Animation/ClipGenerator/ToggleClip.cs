@@ -34,6 +34,7 @@ namespace colloid.FXCreator.Animation
 		}
 		
 		[MenuItem(m_menuItem ,validate = true ,menuItem = m_skinnedMeshRendererMenuItem)]
+		[MenuItem(m_menuItem ,validate = true ,menuItem = "CONTEXT/" + nameof(SkinnedMeshRenderer) + "/" + m_menuItem)]
 		static bool ValidateGenerateSkinnedMeshRendererClip()
 		{
 			return Selection.gameObjects.Any()
@@ -41,12 +42,15 @@ namespace colloid.FXCreator.Animation
 		}
 		
 		[MenuItem(m_menuItem ,menuItem = m_skinnedMeshRendererMenuItem, priority = 1011)]
+		[MenuItem(m_menuItem ,menuItem = "CONTEXT/" + nameof(SkinnedMeshRenderer) + "/" + m_menuItem)]
 		static void GenerateSkinnedMeshRendererClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<SkinnedMeshRenderer>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<SkinnedMeshRenderer>())));
 		}
 		
 		[MenuItem(m_menuItem ,validate = true ,menuItem = m_meshRendererMenuItem)]
+		[MenuItem(m_menuItem ,validate = true ,menuItem = "CONTEXT/" + nameof(MeshRenderer) + "/" + m_menuItem)]
 		static bool ValidateGenerateMeshRendererClip()
 		{
 			return Selection.gameObjects.Any()
@@ -54,9 +58,31 @@ namespace colloid.FXCreator.Animation
 		}
 		
 		[MenuItem(m_menuItem ,menuItem = m_meshRendererMenuItem, priority = 1011)]
+		[MenuItem(m_menuItem ,menuItem = "CONTEXT/" + nameof(MeshRenderer) + "/" + m_menuItem)]
 		static void GenerateMeshRendererClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<MeshRenderer>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<MeshRenderer>())));
+		}
+		
+		static void ContextGenerateMeshRendererClip()
+		{
+			OnceFilter(() => Debug.Log(Selection.activeGameObject));
+		}
+		
+		private static bool _called;
+		public static void OnceFilter(Action action)
+		{
+			if (_called) return;
+			action();
+			_called = true;
+			EditorApplication.delayCall += OnDeleayCall;
+		}
+		
+		static void OnDeleayCall()
+		{
+			_called = false;
+			EditorApplication.delayCall -= OnDeleayCall;
 		}
 		
 		/// <summary>

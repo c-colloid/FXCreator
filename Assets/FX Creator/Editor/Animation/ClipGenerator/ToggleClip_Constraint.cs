@@ -29,7 +29,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_aimConstraintContextMenuItem)]
 		static void GenerateAimConstraintClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<AimConstraint>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<AimConstraint>())));
 		}
 		
 		const string m_LookAtConstraintContextMenuItem = "CONTEXT/" + nameof(LookAtConstraint) +"/"+ m_menuItem;
@@ -46,7 +47,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_LookAtConstraintContextMenuItem)]
 		static void GenerateLookAtConstraintClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<LookAtConstraint>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<LookAtConstraint>())));
 		}
 		
 		const string m_ParentConstraintContextMenuItem = "CONTEXT/" + nameof(ParentConstraint) +"/"+ m_menuItem;
@@ -63,7 +65,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_ParentConstraintContextMenuItem)]
 		static void GenerateParentConstraintClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<ParentConstraint>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<ParentConstraint>())));
 		}
 		
 		const string m_PositionConstraintContextMenuItem = "CONTEXT/" + nameof(PositionConstraint) +"/"+ m_menuItem;
@@ -80,7 +83,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_PositionConstraintContextMenuItem)]
 		static void GeneratePositionConstraintClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<PositionConstraint>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<PositionConstraint>())));
 		}
 		
 		const string m_RotationConstraintContextMenuItem = "CONTEXT/" + nameof(RotationConstraint) +"/"+ m_menuItem;
@@ -97,7 +101,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_RotationConstraintContextMenuItem)]
 		static void GenerateRotationConstraintClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<RotationConstraint>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<RotationConstraint>())));
 		}
 		
 		const string m_ScaleConstraintContextMenuItem = "CONTEXT/" + nameof(ScaleConstraint) +"/"+ m_menuItem;
@@ -114,7 +119,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_ScaleConstraintContextMenuItem)]
 		static void GenerateScaleConstraintClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<ScaleConstraint>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<ScaleConstraint>())));
 		}
 	}	
 }

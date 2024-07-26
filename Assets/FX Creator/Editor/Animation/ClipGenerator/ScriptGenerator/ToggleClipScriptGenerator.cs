@@ -38,7 +38,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_contextMenuItem)]
 		static void Generate#m_component#Clip()
 		{{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<#m_type#>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<#m_type#>())));
 		}}
 	}}
 }}";
@@ -59,7 +60,8 @@ static bool VaridationGenerate#m_component#Clip()
 [MenuItem(m_menuItem ,menuItem = m_#m_component#ContextMenuItem)]
 static void Generate#m_component#Clip()
 {{
-	GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<#m_type#>()));
+	OnceFilter(() =>
+		GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<#m_type#>())));
 }}";
 	
 		[MenuItem("Tools/ClipGen/Settings/GenerateScript")]

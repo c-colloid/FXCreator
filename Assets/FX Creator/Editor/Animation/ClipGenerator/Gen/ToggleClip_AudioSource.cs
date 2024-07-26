@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 using System.Linq;
 
@@ -21,7 +21,8 @@ namespace colloid.FXCreator.Animation
 		[MenuItem(m_menuItem ,menuItem = m_contextMenuItem)]
 		static void GenerateAudioSourceClip()
 		{
-			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<AudioSource>()));
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<AudioSource>())));
 		}
 	}
 }
