@@ -49,6 +49,24 @@ namespace colloid.FXCreator.Animation
 			OnceFilter(() =>
 			GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<VRCPhysBoneCollider>())));
 		}
+		
+		const string m_VRCHeadChopMenuItem = m_componentMenuItemPath + "VRChat/" + nameof(VRCHeadChop);
+		const string m_VRCHeadChopContextMenuItem = "CONTEXT/" + nameof(VRCHeadChop) +"/"+ m_menuItem;
+		
+		[MenuItem(m_menuItem ,validate = true ,menuItem = m_VRCHeadChopMenuItem)]
+		[MenuItem(m_menuItem ,validate = true ,menuItem = m_VRCHeadChopContextMenuItem)]
+		static bool VaridationGenerateVRCHeadChopClip()
+		{
+			return Selection.gameObjects.Any()
+				&& Selection.gameObjects.All(o => o.TryGetComponent<VRCHeadChop>(out var result));
+		}
+		
+		[MenuItem(m_menuItem ,menuItem = m_VRCHeadChopMenuItem, priority = 1011)]
+		[MenuItem(m_menuItem ,menuItem = m_VRCHeadChopContextMenuItem)]
+		static void GenerateVRCHeadChopClip()
+		{
+			OnceFilter(() =>
+				GenerateToggelActiveComponentsClip(Selection.gameObjects.Select(o => o.GetComponent<VRCHeadChop>())));
 		}
 	}
 }
