@@ -13,8 +13,8 @@ namespace colloid.FXCreator.Animation
 		public const string m_menuItem = "ClipGen";
 		public const string m_componentMenuItemPath = nameof(GameObject) + "/" + m_menuItem + "/" + nameof(Component) + "/";
 		
-		const string m_skinnedMeshRendererMenuItem = m_componentMenuItemPath + nameof(SkinnedMeshRenderer);
-		const string m_meshRendererMenuItem = m_componentMenuItemPath + nameof(MeshRenderer);
+		const string m_skinnedMeshRendererMenuItem = m_componentMenuItemPath + "/" + nameof(Renderer) + "/" + nameof(SkinnedMeshRenderer);
+		const string m_meshRendererMenuItem = m_componentMenuItemPath + "/" + nameof(Renderer) + "/" + nameof(MeshRenderer);
 		
 		const string m_saveDialogTitle = "Save AnimationClip";
 		const string m_saveDialogMessage = "Please select save folder.";
