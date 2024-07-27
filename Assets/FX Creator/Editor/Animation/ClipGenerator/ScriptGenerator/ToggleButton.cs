@@ -32,9 +32,7 @@ namespace colloid.FXCreator.Animation.Generator.CustomUI
 	{
 		clicked += () => {
 			value = !value;
-			SetStyle();
 		};
-		SetStyle();
 	}
 	
 	public ToggleButton(string text) : this()
@@ -61,6 +59,7 @@ namespace colloid.FXCreator.Animation.Generator.CustomUI
 	public void SetValueWithoutNotify(bool newValue)
 	{
 		_check = newValue;
+		SetStyle();
 	}
 	
 	void SetStyle()
