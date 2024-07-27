@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement name="ParameterSet" style="flex-direction: row; overflow: hidden; align-items: center; justify-content: space-between; margin-right: 12px; margin-left: 20px;">
+        <ui:Label tabindex="-1" text="ParameterName" parse-escape-sequences="true" display-tooltip-when-elided="true" style="flex-shrink: 1; flex-grow: 1; overflow: hidden;" />
+        <ui:Box name="Buttons" style="flex-direction: row; flex-shrink: 0;">
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="FX" text="FX" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="Base" text="L" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="Additive" text="*A" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="Gesture" text="G" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="Action" text="A" />
+        </ui:Box>
+    </ui:VisualElement>
+</ui:UXML>

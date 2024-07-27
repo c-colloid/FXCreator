@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:Foldout text="In Animator Parameters" name="InAnimatorParameters" style="margin-left: 12px;">
+        <ui:VisualElement name="FilterButtons" style="flex-direction: row; align-items: center; overflow: hidden;">
+            <ui:Label tabindex="-1" text="Filter:" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="FX" text="FX" value="true" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="Base" text="Locomotion" value="true" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="Additive" text="Additive" value="true" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="Gesture" text="Gesture" value="true" />
+            <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="Action" text="Action" value="true" />
+        </ui:VisualElement>
+        <ui:TextField picking-mode="Ignore" name="FilterTextField" style="margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0;" />
+        <ui:ListView show-border="true" name="InAnimatorParametersList" />
+    </ui:Foldout>
+</ui:UXML>

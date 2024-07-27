@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 3b3734104ad1b7b488952d8573f8b1e8
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_tree_ParameterSet: {fileID: 9197481963319205126, guid: 1fde1cc766ec22d4798067b54a4dfa90,
+      type: 3}
+  - m_inAnimatorParameters: {fileID: 9197481963319205126, guid: c300baf15eef91942a0acde60878ab8f,
+      type: 3}
+  - m_inAnimatorParameter: {fileID: 9197481963319205126, guid: 20f4032d8d7d596459dcc880d9427c7c,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
