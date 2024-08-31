@@ -197,6 +197,12 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "jp.colloid.pbreplacer": {
+      "version": "file:jp.colloid.pbreplacer",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "jp.lilxyzw.avatar-utils": {
       "version": "file:jp.lilxyzw.avatar-utils",
       "depth": 0,
