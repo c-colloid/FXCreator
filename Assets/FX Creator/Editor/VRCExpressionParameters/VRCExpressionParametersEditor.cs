@@ -62,7 +62,9 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 	{
 		SO = serializedObject.targetObject as VRCExpressionParameters;
 		m_parameters = SO.parameters;
-		var avatars = EditorSceneManager.GetActiveScene().GetRootGameObjects().Where(o => o.TryGetComponent<VRCAvatarDescriptor>(out var result) && o.active);
+		var avatars = EditorSceneManager.GetActiveScene()
+                .GetRootGameObjects()
+                .Where(o => o.TryGetComponent<VRCAvatarDescriptor>(out var result) && o.activeInHierarchy);
 		var avatar = new VRCAvatarDescriptor();
 		var InAnimatorParameters = m_inAnimatorParameters.CloneTree();
 		InAnimatorParameters.styleSheets.Add(m_foldoutUSS);
