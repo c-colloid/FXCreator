@@ -45,8 +45,10 @@ public class EyeJiggleSetting : MonoBehaviour
 	#region PublicMethod
 	public AnimationClip GenerateClip()
 	{
-		var SaveBlendANimations = new List<BlendAnimation>(m_blendAnimations);
-		SaveBlendANimations.Add(new BlendAnimation(){BlendShape = m_mainBlendShape, AnimationCurve = m_animationCurve});
+		var SaveBlendANimations = new List<BlendAnimation>(m_blendAnimations)
+        {
+            new BlendAnimation() { BlendShape = m_mainBlendShape, AnimationCurve = m_animationCurve }
+        };
 		return GenerateAnimClip.Generate(SaveBlendANimations,m_mesh);
 	}
 	#endregion
