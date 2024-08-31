@@ -13,6 +13,7 @@ namespace colloid.FXCreator.Animation.Generator
 		private static string m_component = "Component";
 		private static string m_type = "Component";
 		private static string m_groupPath = "";
+		[SerializeField] Object m_saveFolder;
 		
 		private static string CODE = 
 $@"using UnityEngine;
@@ -111,7 +112,8 @@ static void Generate#m_component#Clip()
 					.Replace("#m_type#",m_type)
 					.Replace($"#{nameof(m_groupPath)}#",string.IsNullOrEmpty(m_groupPath) ? "" : m_groupPath + "/");
 					
-				var path = $"Assets/FX Creator/Editor/Animation/ClipGenerator/Gen/{m_groupPath}";
+				
+				var path = $"{AssetDatabase.GetAssetPath(m_saveFolder)}/{m_groupPath}";
 				
 				// 作成するアセットのパス
 				var filePath =

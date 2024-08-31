@@ -7,3 +7,22 @@
 ・Tools/ClipGen/Settings内に設定があります
 	-ClipName：接頭辞(Prefix)・接尾辞(Suffix)のオンオフを制御
 	-GenerateScript：未対応Componentのコンテキストメニューを生成
+	
+対応一覧
+・GameObject
+[コンポーネント]
+・SkinnedMeshRenderer
+・MeshRenderer
+・PhysBone
+・PhysBoneCollider
+・Aim Constraint
+・LookAt Constraint
+・Parent Constraint
+・Position Constraint
+・Rotation Constraint
+・Scale Constraint
+・Box Collider
+・Capsule Collider
+・Mesh Collider
+・Sphere Collider
+・AudioSource

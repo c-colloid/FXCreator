@@ -27,10 +27,18 @@ namespace colloid.FXCreator.Animation
 		const string m_settingsSetSuffixMenuItem = "Tools/" + m_menuItem + "/Settings/ClipName/SetSuffix--Type-";
 		static bool m_init = false;
 		
+		[MenuItem(m_menuItem ,validate = true ,menuItem = nameof(GameObject) + "/" + m_menuItem + "/" + nameof(GameObject))]
+		static bool ValidateGenerateGameObjectClip()
+		{
+			return Selection.gameObjects.Any();
+		}
+		
 		[MenuItem(m_menuItem ,menuItem = nameof(GameObject) + "/" + m_menuItem + "/" + nameof(GameObject), priority = 1000)]
 		static void GenerateGameObjectClip()
 		{
-			GenerateToggelGameObjectsClip(Selection.gameObjects);
+			OnceFilter(() =>
+				GenerateToggelGameObjectsClip(Selection.gameObjects)
+			);
 		}
 		
 		[MenuItem(m_menuItem ,validate = true ,menuItem = m_skinnedMeshRendererMenuItem)]
@@ -186,6 +194,7 @@ namespace colloid.FXCreator.Animation
 		
 		static void GenClips(UnityEngine.Object Target)
 		{
+			Init();
 			var FileName = (m_settingsSetPrefix ? $"({m_menuItem})" : "")
 				+ $"{Target.name}"
 				+ (m_settingsSetSuffix ? $"-{Target.GetType().Name}-" : "");
