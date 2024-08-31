@@ -94,6 +94,8 @@ public class EyeJiggleSettingEditor : Editor
 		var meshOF = inspector.Q<ObjectField>();
 		var dropdown = inspector.Q<DropdownField>();
 		var curve = inspector.Q<CurveField>();
+		curve.ranges = new Rect(0,0,float.PositiveInfinity,1);
+		curve.renderMode = CurveField.RenderMode.Mesh;
 		m_minmaxSlider = inspector.Q<MinMaxSlider>();
 		m_progress = inspector.Q<ProgressBar>();
 		m_timeSlider = inspector.Q<Slider>();
@@ -155,6 +157,8 @@ public class EyeJiggleSettingEditor : Editor
 			ve.Q<BindableElement>().BindProperty(list.itemsSource[i] as SerializedProperty);
 			var listDropDown = ve.Q<DropdownField>();
 			var listAnimationCurve = ve.Q<CurveField>();
+			listAnimationCurve.ranges = new Rect(0,0,float.PositiveInfinity,1);
+			listAnimationCurve.renderMode = CurveField.RenderMode.Mesh;
 			var listtimeSlider = ve.Q<Slider>();
 			listtimeSlider.Q<VisualElement>("","unity-slider__input").pickingMode = PickingMode.Ignore;
 			listtimeSlider.Q<VisualElement>("unity-drag-container").pickingMode = PickingMode.Ignore;
