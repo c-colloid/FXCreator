@@ -32,10 +32,6 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 	
 	const string m_split = "~~.#/";
 	
-	//リスト内で登録したコールバックをUnregisterCallbackでクリーニングするアクション
-	Action m_unregisterAll = null;
-	//Action m_unregisterInAnimationParameterList = null;
-	
 	new void OnEnable()
 	{
 		base.OnEnable();
@@ -207,21 +203,18 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 			return ve;
 		};
 		ParametersList.bindItem = (ve,i) =>{
+
+			//旧仕様
 			//ve.Q<Label>().BindProperty(serializedObject.FindProperty($"parameters.Array.data[{i}].name"));
+			//新仕様
 			ve.Q<Label>().BindProperty((ParametersList.itemsSource[i] as SerializedProperty).FindPropertyRelative("name"));
+
 			ve.name = ve.Q<Label>().text;
 			var avatar = avatars.SingleOrDefault(o => o.name == avatarSelector.value).GetComponent<VRCAvatarDescriptor>();
 			ve.Query<ToggleButton>().ForEach(tg => tg.SetValueWithoutNotify(false));
 			ve.Query<ToggleButton>().ForEach(tg => tg.SetEnabled(true));
 			VRCParametersList.RefreshItem(VRCParameters.IndexOf(VRCParameters.SingleOrDefault(o => o.name == ve.name)));
 			
-			//void SetParametersListEvent(ChangeEvent<string> evt)
-			//{
-			//	ve.Query<ToggleButton>().ForEach(tg => tg.SetValueWithoutNotify(false));
-			//	ve.Query<ToggleButton>().ForEach(tg => tg.SetEnabled(true));
-			//	ve.name = evt.newValue;
-			//	SetParametersList();
-			//}
 			void SetParametersList()
 			{
 				avatar.baseAnimationLayers
@@ -243,47 +236,8 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 			}
 			SetParametersList();
 				
-			//m_unregisterAll += () =>
-			//	ve.Q<Label>().UnregisterValueChangedCallback(SetParametersListEvent);
-			//ve.Q<Label>().RegisterValueChangedCallback(SetParametersListEvent);
-			
-			//EventCallback<ChangeEvent<bool>> SetNewParameters = (evt) =>
-			//{
-			//	Debug.Log((evt.target as ToggleButton).name);
-			//	avatar.baseAnimationLayers
-			//		.ToList().ForEach(o => {
-			//			if (o.isDefault || o.animatorController == null)
-			//			{
-			//				ve.Query<ToggleButton>().Where(tg => tg.name == o.type.ToString())
-			//					.ForEach(tg => tg.SetEnabled(false));
-			//				return;
-			//			}
-						
-			//			if (o.type.ToString() != (evt.target as ToggleButton).name) return;
-						
-			//			var parameters = (o.animatorController as AnimatorController).parameters;
-			//			var parameterType = m_parameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Bool ? AnimatorControllerParameterType.Bool 
-			//				: m_parameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Float ? AnimatorControllerParameterType.Float 
-			//				: m_parameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Int ? AnimatorControllerParameterType.Int : AnimatorControllerParameterType.Trigger;
-						
-			//			if (evt.newValue)
-			//			(o.animatorController as AnimatorController).AddParameter(ve.name,parameterType);
-			//			else
-			//			(o.animatorController as AnimatorController).RemoveParameter(
-			//				parameters.SingleOrDefault(p => p.name == ve.name));
-			//		});
-			//	SetInAnimatorParametersList();
-			//};
-			
-			//ve.Query<ToggleButton>().ForEach(tg => tg.RegisterCallback<ChangeEvent<bool>>(SetNewParameters));
-			//m_unregisterAll += () =>
-			//	ve.Query<ToggleButton>().ForEach(tg => 
-			//	tg.UnregisterCallback<ChangeEvent<bool>>(SetNewParameters));
 		};
 		ParametersList.unbindItem = (ve,i) => {
-			//if (m_unregisterAll == null || i != 0) return;
-			//m_unregisterAll?.Invoke();
-			//m_unregisterAll = null;
 			VRCParametersList.RefreshItem(VRCParameters.IndexOf(VRCParameters.SingleOrDefault(o => o.name == ve.name)));
 		};
 		
@@ -292,9 +246,13 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		VRCParametersList.itemsSource = VRCParameters;
 		VRCParametersList.makeItem = MakeParametersListItem;
 		VRCParametersList.bindItem = (ve,i) =>{
+
+			//旧仕様
 			//ve.Q<Label>().BindProperty((VRCParametersList.itemsSource[i] as SerializedProperty).FindPropertyRelative("name"));
+			//新仕様
 			ve.SetEnabled(m_parameters.All(o => o.name != VRCParameters[i].name));
-			ve.style.backgroundColor = (m_parameters.All(o => o.name != VRCParameters[i].name) ? default : Color.gray*0.1f);
+
+			ve.style.backgroundColor = m_parameters.All(o => o.name != VRCParameters[i].name) ? default : Color.gray*0.1f;
 			ve.Q<Label>().text = VRCParameters[i].name;
 			ve.name = ve.Q<Label>().text;
 			var avatar = avatars.SingleOrDefault(o => o.name == avatarSelector.value).GetComponent<VRCAvatarDescriptor>();
@@ -362,10 +320,13 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 			{
 				var newParameter = new Parameter();
 				newParameter.name = ve.name;
+
+				//確認用
 				//Debug.Log(avatars.SingleOrDefault(o => o.name == avatarSelector.value)
 				//	.GetComponent<VRCAvatarDescriptor>().baseAnimationLayers.Where(o => !o.isDefault)
 				//	.Select(o => (o.animatorController as AnimatorController).parameters)
 				//	.Where(o => o.Any(p => p.name == ve.name)).First().SingleOrDefault(p => p.name == ve.name).type);
+
 				var layers = avatars.SingleOrDefault(o => o.name == avatarSelector.value)
 					.GetComponent<VRCAvatarDescriptor>().baseAnimationLayers.Where(o => !o.isDefault);
 				var type = layers.Select(o => (o.animatorController as AnimatorController).parameters)
@@ -379,7 +340,6 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 				EditorApplication.delayCall += SetInAnimatorParametersList;
 			}
 			
-			//m_unregisterInAnimationParameterList = () => ve.Q<Button>().clicked -= Clicked;
 			ve.Q<Button>().clicked += Clicked;
 			
 			return ve;
@@ -391,13 +351,11 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		
 		};
 		InAnimatorParametersList.unbindItem = (ve,i) => {
-			//if (m_unregisterInAnimationParameterList == null) return;
-			//m_unregisterInAnimationParameterList?.Invoke();
-			//m_unregisterInAnimationParameterList = null;
-			//EditorApplication.delayCall -= SetInAnimatorParametersList;
+
 		};
 		
 		InAnimatorParametersList.itemsSourceChanged += () => {
+			//確認用
 			//Debug.Log(string.Join(m_split,avatars.SingleOrDefault(o => o.name == avatarSelector.value).GetComponent<VRCAvatarDescriptor>().baseAnimationLayers.Where(o => !o.isDefault).Select(o => string.Join(m_split,(o.animatorController as AnimatorController).parameters.Select(p => p.name)))));
 		};
 		
