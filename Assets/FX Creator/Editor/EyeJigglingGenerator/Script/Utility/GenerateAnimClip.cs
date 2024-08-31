@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
+namespace colloid.FXCreator.EyeJigglingGenerator
+{
+	
 /// <summary>
 /// Generate AnimationClip asset.
 /// </summary>
@@ -110,4 +113,5 @@ public class GenerateAnimClip
 			AssetDatabase.CreateAsset(newClip = clip,path);	
 		}
 	}
+}
 }

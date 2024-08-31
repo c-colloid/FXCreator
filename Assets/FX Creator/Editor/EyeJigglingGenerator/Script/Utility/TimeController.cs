@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
+namespace colloid.FXCreator.EyeJigglingGenerator
+{
+	
 public class TimeController
 {
 	float m_previousTime = 0;
@@ -47,4 +50,5 @@ public class TimeController
 		m_previousTime = (float)EditorApplication.timeSinceStartup;
 		time = m_currentTime;
 	}
+}
 }

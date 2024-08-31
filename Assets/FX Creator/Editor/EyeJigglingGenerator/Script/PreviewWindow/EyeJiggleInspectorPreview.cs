@@ -12,6 +12,8 @@ using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 //using BestHTTP.SecureProtocol.Org.BouncyCastle.Asn1.Pkcs;
 
+namespace colloid.FXCreator.EyeJigglingGenerator
+{
 public class EyeJiggleInspectorPreview : IDisposable
 {
 	public Scene Scene{get; private set;}
@@ -711,4 +713,5 @@ public class EyeJiggleInspectorPreview : IDisposable
 		SceneManager.MoveGameObjectToScene(go, Scene);
 	}
 #endregion
+}
 }

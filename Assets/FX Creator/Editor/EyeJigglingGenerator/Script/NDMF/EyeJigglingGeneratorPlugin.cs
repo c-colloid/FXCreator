@@ -6,8 +6,11 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
 using nadena.dev.ndmf;
+using colloid.FXCreator.EyeJigglingGenerator;
 
 [assembly: ExportsPlugin(typeof(EyeJigglingGeneratorPlugin))]
+namespace colloid.FXCreator.EyeJigglingGenerator
+{
 
 public class EyeJigglingGeneratorPlugin : Plugin<EyeJigglingGeneratorPlugin>
 {
@@ -113,5 +116,6 @@ public class EyeJigglingGeneratorPlugin : Plugin<EyeJigglingGeneratorPlugin>
 			Object.DestroyImmediate(ctx.AvatarRootTransform.GetComponentInChildren<EyeJiggleSetting>());
 		});
 	}
+}
 }
 #endif

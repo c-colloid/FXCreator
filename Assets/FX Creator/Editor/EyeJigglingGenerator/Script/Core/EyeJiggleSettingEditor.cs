@@ -8,9 +8,11 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
-using UnityEngine.Experimental.GlobalIllumination;
-using BakeBlendshape = EyeJiggleInspectorPreview.BakeBlendshape;
 
+namespace colloid.FXCreator.EyeJigglingGenerator
+{
+using BakeBlendshape = EyeJiggleInspectorPreview.BakeBlendshape;
+	
 [CustomEditor(typeof(EyeJiggleSetting))]
 public class EyeJiggleSettingEditor : Editor
 {
@@ -516,3 +518,4 @@ public class EyeJiggleSettingEditor : Editor
 	#endregion
 }
 #endif
+}

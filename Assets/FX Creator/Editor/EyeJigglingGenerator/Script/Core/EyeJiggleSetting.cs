@@ -3,8 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-using System.Diagnostics;
 
+namespace colloid.FXCreator.EyeJigglingGenerator
+{
+	
 public class EyeJiggleSetting : MonoBehaviour
 #if VRC
 ,VRC.SDKBase.IEditorOnly
@@ -78,4 +80,5 @@ public class BlendAnimation
 	public AnimationCurve AnimationCurve {get => m_animationcurve; set => m_animationcurve = value;}
 	public Vector2 TimerClamp {get => m_timerClamp; set => m_timerClamp = value;}
 	public bool PlayButton {get => m_playbutton; set => m_playbutton = value;}
+}
 }
