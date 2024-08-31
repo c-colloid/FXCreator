@@ -1,0 +1,38 @@
+.unity-foldout--depth-0 {
+    background-color: rgba(91, 94, 99, 0.8);
+}
+
+.unity-foldout__toggle {
+    background-color: rgba(0, 68, 103, 0.8);
+    margin-bottom: 0;
+    margin-left: 0;
+}
+
+.unity-foldout__toggle:hover {
+    background-color: var(--unity-colors-button-background-hover);
+}
+
+.unity-list-view#InAnimatorParametersList {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 0;
+    padding-right: 4px;
+}
+
+.unity-text-field#FilterTextField {
+    padding-right: 4px;
+    padding-top: 1px;
+}
+
+#FilterButtons {
+    padding-top: 2px;
+}
+
+.unity-list-view {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+#InAnimatorParameters {
+    margin-top: 4px;
+}

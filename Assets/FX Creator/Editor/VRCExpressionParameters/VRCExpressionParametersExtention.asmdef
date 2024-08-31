@@ -10,7 +10,15 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": false,
-    "defineConstraints": [],
-    "versionDefines": [],
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.vrchat.avatars",
+            "expression": "3.7.0",
+            "define": "VRCSDK_370_OR_NEWER"
+        }
+    ],
     "noEngineReferences": false
 }

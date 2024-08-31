@@ -10,6 +10,8 @@ MonoImporter:
       type: 3}
   - m_inAnimatorParameter: {fileID: 9197481963319205126, guid: 20f4032d8d7d596459dcc880d9427c7c,
       type: 3}
+  - m_foldoutUSS: {fileID: 7433441132597879392, guid: 44427f82ec64ac6459f3ae6e67566eb2,
+      type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

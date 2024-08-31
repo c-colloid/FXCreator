@@ -1,5 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
-    <ui:Foldout text="In Animator Parameters" name="InAnimatorParameters" style="margin-left: 12px;">
+    <ui:Foldout text="In Animator Parameters" name="InAnimatorParameters" value="false">
         <ui:VisualElement name="FilterButtons" style="flex-direction: row; align-items: center; overflow: hidden;">
             <ui:Label tabindex="-1" text="Filter:" parse-escape-sequences="true" display-tooltip-when-elided="true" />
             <colloid.FXCreator.VRCExpressionParametersExtention.CustomUI.ToggleButton name="FX" text="FX" value="true" />

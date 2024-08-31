@@ -1,18 +1,22 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 using UnityEditor.UIElements;
-using VRC.SDK3.Avatars.ScriptableObjects;
-using System.Linq;
 using UnityEditor.SceneManagement;
-using VRC.SDK3.Avatars.Components;
 using UnityEditor.Animations;
+using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDK3.Editor;
 using colloid.FXCreator.VRCExpressionParametersExtention.CustomUI;
-using System;
 
 using Parameter = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter;
+
+namespace colloid.FXCreator.VRCExpressionParametersExtention
+{
 
 [CustomEditor(typeof(VRCExpressionParameters))]
 public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEditor
@@ -21,12 +25,32 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 	VRCExpressionParameters SO;
 	[SerializeField]
 	VisualTreeAsset m_tree_ParameterSet,m_inAnimatorParameters,m_inAnimatorParameter;
+	[SerializeField]
+	StyleSheet m_foldoutUSS;
+	
+	static readonly List<Parameter> VRCParameters = VRCDefaultParameters.VRCParameters;
 	
 	const string m_split = "~~.#/";
 	
 	//リスト内で登録したコールバックをUnregisterCallbackでクリーニングするアクション
 	Action m_unregisterAll = null;
 	//Action m_unregisterInAnimationParameterList = null;
+	
+	new void OnEnable()
+	{
+		base.OnEnable();
+		m_foldoutUSS = EditorGUIUtility.isProSkin ? AssetDatabase.LoadAssetAtPath<StyleSheet>(AssetDatabase.GUIDToAssetPath("bd6ed3062a3676740831ef55bfd77e69")) : AssetDatabase.LoadAssetAtPath<StyleSheet>(AssetDatabase.GUIDToAssetPath("44427f82ec64ac6459f3ae6e67566eb2"));
+		
+		if (!EditorApplication.isPlaying) return;
+		if (m_tree_ParameterSet == null)
+			m_tree_ParameterSet = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AssetDatabase.GUIDToAssetPath("1fde1cc766ec22d4798067b54a4dfa90"));
+		if (m_inAnimatorParameters == null)
+			m_inAnimatorParameters = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AssetDatabase.GUIDToAssetPath("c300baf15eef91942a0acde60878ab8f"));
+		if (m_inAnimatorParameter == null)
+			m_inAnimatorParameter = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AssetDatabase.GUIDToAssetPath("20f4032d8d7d596459dcc880d9427c7c"));
+		if ( m_foldoutUSS == null)
+			m_foldoutUSS = AssetDatabase.LoadAssetAtPath<StyleSheet>(AssetDatabase.GUIDToAssetPath("44427f82ec64ac6459f3ae6e67566eb2"));
+	}
 	
 	public override void OnInspectorGUI()
 	{
@@ -45,11 +69,16 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		var avatars = EditorSceneManager.GetActiveScene().GetRootGameObjects().Where(o => o.TryGetComponent<VRCAvatarDescriptor>(out var result) && o.active);
 		var avatar = new VRCAvatarDescriptor();
 		var InAnimatorParameters = m_inAnimatorParameters.CloneTree();
+		InAnimatorParameters.styleSheets.Add(m_foldoutUSS);
 		var InAnimatorParametersList = InAnimatorParameters.Q<ListView>();
 		var filterText = "";
 		
 		var root = new VisualElement();
+		#if VRCSDK_370_OR_NEWER
+		root.Add(base.CreateInspectorGUI());
+		#else
 		root.Add(new IMGUIContainer(()=> OnInspectorGUI()));
+		#endif
 		
 		if (avatars.Count() < 1)
 		{
@@ -71,7 +100,7 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		var buttonBox = new Box(){style = {flexDirection = FlexDirection.Row}};
 		root.Add(buttonBox);
 		
-		var add = new Button(){text = "Add", style = {flexGrow = 1}};
+		var add = new Button(){text = "Add", style = {flexGrow = 1,display = DisplayStyle.None}};
 		add.clicked += () => {
 			System.Array.Resize(ref SO.parameters, SO.parameters.Length + 1);
 		};
@@ -85,9 +114,20 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		
 		buttonBox.Add(delete);
 		
+		var VRCParametersList = new ListView(){headerTitle = "VRC Parameters", showFoldoutHeader = true, selectionType = SelectionType.None , style = {display = DisplayStyle.None}};
+		VRCParametersList.styleSheets.Add(m_foldoutUSS);
+		var viewVRCParameters = new ToggleButton(){text = "View VRC Parameters", style = {flexGrow = 1}};
+		viewVRCParameters.SetValueWithoutNotify(false);
+		viewVRCParameters.RegisterCallback<ChangeEvent<bool>>(evt => {
+			VRCParametersList.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+		});
+		
+		buttonBox.Add(viewVRCParameters);
+		
 		var relode = new Button(){text = "Relode", style = {flexGrow = 1}};
 		relode.clicked += () => {
 			SetInAnimatorParametersList();
+			VRCParametersList.Rebuild();
 		};
 		
 		buttonBox.Add(relode);
@@ -99,8 +139,11 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		root.Add(avatarSelector);
 		
 		var ParametersList = new ListView(){headerTitle = "Parameters", showFoldoutHeader = true, selectionType = SelectionType.None};
+		ParametersList.styleSheets.Add(m_foldoutUSS);
 		ParametersList.bindingPath = "parameters";
-		ParametersList.makeItem = () => {
+		ParametersList.makeItem = MakeParametersListItem;
+		VisualElement MakeParametersListItem()
+		{
 			var ve = m_tree_ParameterSet.CloneTree();
 			void SetParametersListEvent(ChangeEvent<string> evt)
 			{
@@ -144,9 +187,12 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 						if (o.type.ToString() != (evt.target as ToggleButton).name) return;
 						
 						var parameters = (o.animatorController as AnimatorController).parameters;
-						var parameterType = m_parameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Bool ? AnimatorControllerParameterType.Bool 
-							: m_parameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Float ? AnimatorControllerParameterType.Float 
-							: m_parameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Int ? AnimatorControllerParameterType.Int : AnimatorControllerParameterType.Trigger;
+						var AllParameters = new List<Parameter>(m_parameters);
+						AllParameters.AddRange(
+							VRCParameters.Where(o => AllParameters.All(p => p.name != o.name)));
+						var parameterType = AllParameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Bool ? AnimatorControllerParameterType.Bool 
+							: AllParameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Float ? AnimatorControllerParameterType.Float 
+							: AllParameters.SingleOrDefault(p => p.name == ve.name).valueType == VRCExpressionParameters.ValueType.Int ? AnimatorControllerParameterType.Int : AnimatorControllerParameterType.Trigger;
 						
 						if (evt.newValue)
 						(o.animatorController as AnimatorController).AddParameter(ve.name,parameterType);
@@ -161,11 +207,13 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 			return ve;
 		};
 		ParametersList.bindItem = (ve,i) =>{
-			ve.Q<Label>().BindProperty(serializedObject.FindProperty($"parameters.Array.data[{i}].name"));
+			//ve.Q<Label>().BindProperty(serializedObject.FindProperty($"parameters.Array.data[{i}].name"));
+			ve.Q<Label>().BindProperty((ParametersList.itemsSource[i] as SerializedProperty).FindPropertyRelative("name"));
 			ve.name = ve.Q<Label>().text;
 			var avatar = avatars.SingleOrDefault(o => o.name == avatarSelector.value).GetComponent<VRCAvatarDescriptor>();
 			ve.Query<ToggleButton>().ForEach(tg => tg.SetValueWithoutNotify(false));
 			ve.Query<ToggleButton>().ForEach(tg => tg.SetEnabled(true));
+			VRCParametersList.RefreshItem(VRCParameters.IndexOf(VRCParameters.SingleOrDefault(o => o.name == ve.name)));
 			
 			//void SetParametersListEvent(ChangeEvent<string> evt)
 			//{
@@ -236,9 +284,46 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 			//if (m_unregisterAll == null || i != 0) return;
 			//m_unregisterAll?.Invoke();
 			//m_unregisterAll = null;
+			VRCParametersList.RefreshItem(VRCParameters.IndexOf(VRCParameters.SingleOrDefault(o => o.name == ve.name)));
 		};
 		
 		root.Add(ParametersList);
+		
+		VRCParametersList.itemsSource = VRCParameters;
+		VRCParametersList.makeItem = MakeParametersListItem;
+		VRCParametersList.bindItem = (ve,i) =>{
+			//ve.Q<Label>().BindProperty((VRCParametersList.itemsSource[i] as SerializedProperty).FindPropertyRelative("name"));
+			ve.SetEnabled(m_parameters.All(o => o.name != VRCParameters[i].name));
+			ve.style.backgroundColor = (m_parameters.All(o => o.name != VRCParameters[i].name) ? default : Color.gray*0.1f);
+			ve.Q<Label>().text = VRCParameters[i].name;
+			ve.name = ve.Q<Label>().text;
+			var avatar = avatars.SingleOrDefault(o => o.name == avatarSelector.value).GetComponent<VRCAvatarDescriptor>();
+			ve.Query<ToggleButton>().ForEach(tg => tg.SetValueWithoutNotify(false));
+			ve.Query<ToggleButton>().ForEach(tg => tg.SetEnabled(true));
+			
+			void SetParametersList()
+			{
+				avatar.baseAnimationLayers
+					.ToList().ForEach(o => {
+						if (o.isDefault || o.animatorController == null)
+						{
+							ve.Query<ToggleButton>().Where(tg => tg.name == o.type.ToString())
+								.ForEach(tg => tg.SetEnabled(false));
+							return;
+						}
+				
+						var parameters = (o.animatorController as AnimatorController).parameters;
+					
+						ve.Query<ToggleButton>().Where(tg => parameters.Select(i => i.name).Contains(ve.Q<Label>().text))
+							.Where(tg => tg.name == o.type.ToString())
+							.ForEach(tg => tg.SetValueWithoutNotify(true))
+							;
+					});	
+			}
+			SetParametersList();
+		};
+		
+		root.Add(VRCParametersList);
 		
 		void SetInAnimatorParametersList()
 		{
@@ -256,7 +341,19 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		}
 		SetInAnimatorParametersList();
 
-		InAnimatorParameters.Query<ToggleButton>().ForEach(o => o.RegisterCallback<ChangeEvent<bool>>(evt => SetInAnimatorParametersList()));
+		InAnimatorParameters.Query<ToggleButton>().ForEach(o => {
+			o.tooltip = $"click:Toggle{Environment.NewLine}ctrl+click:SingleSelect{Environment.NewLine}ctrl+dubleclick:Disselect";
+			o.RegisterCallback<MouseDownEvent>(evt => {
+				if (evt.ctrlKey)
+				{
+					o.value = true;
+					InAnimatorParameters.Query<ToggleButton>().Where(tb => tb != o && tb.value == o.value).ForEach(tb => tb.value = !tb.value);
+					if (evt.clickCount > 1)
+						InAnimatorParameters.Query<ToggleButton>().ForEach(tb => tb.value = !tb.value);
+				}
+			});
+			o.RegisterCallback<ChangeEvent<bool>>(evt => SetInAnimatorParametersList());
+		});
 		
 		InAnimatorParametersList.makeItem = () => {
 			VisualElement ve = m_inAnimatorParameter.CloneTree();
@@ -311,7 +408,7 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		
 		root.Add(InAnimatorParameters);
 		
-		var fold = new Foldout(){text = "DefaultInspector", value = false};
+		var fold = new Foldout(){text = "DefaultInspector", value = false, style = {display = DisplayStyle.None}};
 		fold.Add((new IMGUIContainer(()=> DrawDefaultInspector())));
 		root.Add(fold);
 		
@@ -345,4 +442,5 @@ public class VRCExpressionParametersEditorExtention : VRCExpressionParametersEdi
 		
 		return root;
 	}
+}
 }
