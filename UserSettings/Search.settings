@@ -11,6 +11,9 @@ scopes = {
 	"last_search.C87CA1ED" = ""
 	"OpenInspectorPreview.C87CA1ED" = "0"
 	"currentGroup.C87CA1ED" = "all"
+	"last_search.310DEAF1" = "p: dir=\"Editor\" "
+	"OpenInspectorPreview.310DEAF1" = "0"
+	"currentGroup.310DEAF1" = "all"
 }
 providers = {
 	find = {
@@ -62,6 +65,7 @@ providers = {
 objectSelectors = {
 }
 recentSearches = [
+	"p: dir=\"Editor\" "
 ]
 searchItemFavorites = [
 ]
@@ -70,7 +74,7 @@ showSavedSearchPanel = false
 hideTabs = false
 expandedQueries = [
 ]
-queryBuilder = false
+queryBuilder = true
 ignoredProperties = "id;name;classname;imagecontentshash"
 helperWidgetCurrentArea = "all"
 disabledIndexers = ""

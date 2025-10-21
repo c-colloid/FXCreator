@@ -12,6 +12,7 @@ static public class VRCDefaultParameters
 {
 	static readonly List<Parameter> m_VRCParameters = new List<Parameter>(){
 		new Parameter(){name = "IsLocal",valueType = VRCExpressionParameters.ValueType.Bool,saved = false,defaultValue = 0,networkSynced = false},
+		new Parameter(){name = "PreviewMode",valueType = VRCExpressionParameters.ValueType.Int,saved = false,defaultValue = 0,networkSynced = false},
 		new Parameter(){name = "Viseme",valueType = VRCExpressionParameters.ValueType.Int,saved = false,defaultValue = 0,networkSynced = false},
 		new Parameter(){name = "Voice",valueType = VRCExpressionParameters.ValueType.Float,saved = false,defaultValue = 0,networkSynced = false},
 		new Parameter(){name = "GestureLeft",valueType = VRCExpressionParameters.ValueType.Int,saved = false,defaultValue = 0,networkSynced = false},
@@ -34,6 +35,7 @@ static public class VRCDefaultParameters
 		new Parameter(){name = "Earmuffs",valueType = VRCExpressionParameters.ValueType.Bool,saved = false,defaultValue = 0,networkSynced = false},
 		new Parameter(){name = "IsOnFriendsList",valueType = VRCExpressionParameters.ValueType.Bool,saved = false,defaultValue = 0,networkSynced = false},
 		new Parameter(){name = "AvatarVersion",valueType = VRCExpressionParameters.ValueType.Int,saved = false,defaultValue = 0,networkSynced = false},
+		new Parameter(){name = "IsAnimatorEnabled",valueType = VRCExpressionParameters.ValueType.Bool,saved = false,defaultValue = 0,networkSynced = false},
 		new Parameter(){name = "ScaleModified",valueType = VRCExpressionParameters.ValueType.Bool,saved = false,defaultValue = 0,networkSynced = false},
 		new Parameter(){name = "ScaleFactor",valueType = VRCExpressionParameters.ValueType.Float,saved = false,defaultValue = 0,networkSynced = false},
 		new Parameter(){name = "ScaleFactorInverse",valueType = VRCExpressionParameters.ValueType.Float,saved = false,defaultValue = 0,networkSynced = false},
