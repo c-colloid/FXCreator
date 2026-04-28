@@ -1,0 +1,25 @@
+{
+  "name": "jp.colloid.clipgen",
+  "displayName": "Clip Generator",
+  "version": "0.1.3",
+  "unity": "2022.3",
+  "description": "選択したGameObject / Componentから、オン/オフ用AnimationClipを自動生成するUnity Editor拡張です。VRChat Avatars向けのトグル系アニメーション作成を高速化します。",
+  "author": {
+    "name": "colloid",
+    "url": "https://github.com/c-colloid"
+  },
+  "license": "MIT",
+  "licensesUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.clipgen/LICENSE.md",
+  "changelogUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.clipgen/CHANGELOG.md",
+  "documentationUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.clipgen/README.md",
+  "keywords": [
+    "vrchat",
+    "vrc",
+    "avatar",
+    "animation",
+    "editor"
+  ],
+  "vpmDependencies": {
+    "com.vrchat.avatars": ">=3.5.0"
+  }
+}
