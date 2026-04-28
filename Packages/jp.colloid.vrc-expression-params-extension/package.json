@@ -1,0 +1,25 @@
+{
+  "name": "jp.colloid.vrc-expression-params-extension",
+  "displayName": "VRC Expression Parameters Extension",
+  "version": "0.1.4",
+  "unity": "2022.3",
+  "description": "VRChat Avatars の VRCExpressionParameters Inspector を強化し、Animator内パラメーターやVRC内部パラメーターを視覚的に確認・編集できるようにするUnity Editor拡張です。",
+  "author": {
+    "name": "colloid",
+    "url": "https://github.com/c-colloid"
+  },
+  "license": "MIT",
+  "licensesUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.vrc-expression-params-extension/LICENSE.md",
+  "changelogUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.vrc-expression-params-extension/CHANGELOG.md",
+  "documentationUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.vrc-expression-params-extension/README.md",
+  "keywords": [
+    "vrchat",
+    "vrc",
+    "avatar",
+    "expression-parameters",
+    "editor"
+  ],
+  "vpmDependencies": {
+    "com.vrchat.avatars": ">=3.5.0"
+  }
+}
