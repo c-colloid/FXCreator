@@ -1,0 +1,27 @@
+{
+  "name": "jp.colloid.eye-jiggling-generator",
+  "displayName": "Eye Jiggling Generator",
+  "version": "0.2.8",
+  "unity": "2022.3",
+  "description": "VRChat Avatars向けの目揺れ（瞳ジグル）アニメーションを、BlendShape指定とプレビューUIで素早く構築できるUnity Editor拡張です。NDMFに対応しています。",
+  "author": {
+    "name": "colloid",
+    "url": "https://github.com/c-colloid"
+  },
+  "license": "MIT",
+  "licensesUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.eye-jiggling-generator/LICENSE.md",
+  "changelogUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.eye-jiggling-generator/CHANGELOG.md",
+  "documentationUrl": "https://github.com/c-colloid/fxcreator/blob/main/Packages/jp.colloid.eye-jiggling-generator/README.md",
+  "keywords": [
+    "vrchat",
+    "vrc",
+    "avatar",
+    "blendshape",
+    "ndmf",
+    "modular-avatar"
+  ],
+  "vpmDependencies": {
+    "com.vrchat.avatars": ">=3.5.0",
+    "nadena.dev.ndmf": ">=1.3.0"
+  }
+}
