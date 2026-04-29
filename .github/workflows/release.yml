@@ -1,0 +1,116 @@
+name: Release Package
+
+on:
+  push:
+    tags:
+      - 'clipgen/v*'
+      - 'eyejiggling/v*'
+      - 'vpe/v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse tag
+        id: parse
+        run: |
+          set -euo pipefail
+          TAG=${GITHUB_REF#refs/tags/}
+          PREFIX=${TAG%%/v*}
+          VERSION=${TAG#${PREFIX}/v}
+
+          PKG=$(jq -r --arg prefix "$PREFIX" \
+            '.packages[] | select(.prefix == $prefix) | .name' \
+            .github/scripts/packages.json)
+          PKG_PATH=$(jq -r --arg prefix "$PREFIX" \
+            '.packages[] | select(.prefix == $prefix) | .path' \
+            .github/scripts/packages.json)
+
+          if [ -z "$PKG" ]; then
+            echo "::error::Unknown tag prefix: $PREFIX"
+            exit 1
+          fi
+
+          echo "tag=$TAG"           >> "$GITHUB_OUTPUT"
+          echo "prefix=$PREFIX"     >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION"   >> "$GITHUB_OUTPUT"
+          echo "package=$PKG"       >> "$GITHUB_OUTPUT"
+          echo "package_path=$PKG_PATH" >> "$GITHUB_OUTPUT"
+          echo "zip_name=${PKG}-${VERSION}.zip"           >> "$GITHUB_OUTPUT"
+          echo "unitypackage_name=${PKG}-${VERSION}.unitypackage" >> "$GITHUB_OUTPUT"
+
+      - name: Verify package.json version matches tag
+        run: |
+          set -euo pipefail
+          MANIFEST="${{ steps.parse.outputs.package_path }}/package.json"
+          PKG_VERSION=$(jq -r '.version' "$MANIFEST")
+          if [ "$PKG_VERSION" != "${{ steps.parse.outputs.version }}" ]; then
+            echo "::error::Tag version (${{ steps.parse.outputs.version }}) does not match package.json ($PKG_VERSION) in $MANIFEST"
+            exit 1
+          fi
+
+      - name: Build VPM ZIP
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          (cd "${{ steps.parse.outputs.package_path }}" && \
+           zip -r "${GITHUB_WORKSPACE}/dist/${{ steps.parse.outputs.zip_name }}" . -x "*.DS_Store")
+          ls -la dist/
+
+      - name: Build .unitypackage
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/build_unitypackage.py \
+            "${{ steps.parse.outputs.package_path }}" \
+            "dist/${{ steps.parse.outputs.unitypackage_name }}" \
+            "${{ steps.parse.outputs.package_path }}"
+
+      - name: Stage release manifest and compute listing URL
+        id: stage
+        run: |
+          cp "${{ steps.parse.outputs.package_path }}/package.json" dist/package.json
+          OWNER=${GITHUB_REPOSITORY_OWNER}
+          REPO=${GITHUB_REPOSITORY#${OWNER}/}
+          LOWER_OWNER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "listing_url=https://${LOWER_OWNER}.github.io/${REPO}/index.json" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.parse.outputs.tag }}
+          name: ${{ steps.parse.outputs.package }} ${{ steps.parse.outputs.version }}
+          body: |
+            **Package**: `${{ steps.parse.outputs.package }}`
+            **Version**: `${{ steps.parse.outputs.version }}`
+
+            ### Install via VCC
+
+            Add this listing URL once, then install from the package list:
+
+            ```
+            ${{ steps.stage.outputs.listing_url }}
+            ```
+
+            ### Install manually
+
+            Drop the `.unitypackage` into your Unity project,
+            or extract `${{ steps.parse.outputs.zip_name }}` into `Packages/${{ steps.parse.outputs.package }}/`.
+
+            See `Packages/${{ steps.parse.outputs.package }}/CHANGELOG.md` for the changelog.
+          files: |
+            dist/${{ steps.parse.outputs.zip_name }}
+            dist/${{ steps.parse.outputs.unitypackage_name }}
+            dist/package.json
+
+  rebuild-listing:
+    needs: release
+    uses: ./.github/workflows/build-listing.yml
+    permissions:
+      contents: write
+      pages: write
+      id-token: write

@@ -1,0 +1,62 @@
+name: Validate Packages
+
+on:
+  pull_request:
+    paths:
+      - 'Packages/jp.colloid.*/**'
+      - '.github/scripts/**'
+      - '.github/workflows/**'
+  push:
+    branches: [main]
+    paths:
+      - 'Packages/jp.colloid.*/**'
+      - '.github/scripts/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate package.json files
+        run: |
+          set -euo pipefail
+          fail=0
+          while read -r entry; do
+            path=$(echo "$entry" | jq -r '.path')
+            name=$(echo "$entry" | jq -r '.name')
+            manifest="$path/package.json"
+
+            if [ ! -f "$manifest" ]; then
+              echo "::error::missing $manifest"
+              fail=1
+              continue
+            fi
+
+            actual_name=$(jq -r '.name' "$manifest")
+            if [ "$actual_name" != "$name" ]; then
+              echo "::error::$manifest name=$actual_name expected=$name"
+              fail=1
+            fi
+
+            for field in version unity description; do
+              value=$(jq -r --arg f "$field" '.[$f] // ""' "$manifest")
+              if [ -z "$value" ]; then
+                echo "::error::$manifest is missing required field '$field'"
+                fail=1
+              fi
+            done
+          done < <(jq -c '.packages[]' .github/scripts/packages.json)
+
+          exit "$fail"
+
+      - name: Test unitypackage builder
+        run: |
+          set -euo pipefail
+          while read -r path; do
+            python3 .github/scripts/build_unitypackage.py \
+              "$path" "/tmp/$(basename "$path").unitypackage" "$path"
+          done < <(jq -r '.packages[].path' .github/scripts/packages.json)

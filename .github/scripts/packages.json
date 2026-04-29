@@ -1,0 +1,19 @@
+{
+  "packages": [
+    {
+      "prefix": "clipgen",
+      "name": "jp.colloid.clipgen",
+      "path": "Packages/jp.colloid.clipgen"
+    },
+    {
+      "prefix": "eyejiggling",
+      "name": "jp.colloid.eye-jiggling-generator",
+      "path": "Packages/jp.colloid.eye-jiggling-generator"
+    },
+    {
+      "prefix": "vpe",
+      "name": "jp.colloid.vrc-expression-params-extension",
+      "path": "Packages/jp.colloid.vrc-expression-params-extension"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+name: Build VPM Listing
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: vpm-listing
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine listing URL
+        id: url
+        run: |
+          OWNER=${GITHUB_REPOSITORY_OWNER}
+          REPO=${GITHUB_REPOSITORY#${OWNER}/}
+          LOWER_OWNER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "url=https://${LOWER_OWNER}.github.io/${REPO}/index.json" >> "$GITHUB_OUTPUT"
+
+      - name: Build listing
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p site
+          python3 .github/scripts/build_listing.py \
+            .github/scripts/packages.json \
+            site/index.json \
+            "${{ steps.url.outputs.url }}"
+
+      - name: Add index.html (browse helper)
+        run: |
+          cat > site/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>colloid VPM Listing</title>
+          <h1>colloid VPM Listing</h1>
+          <p>Add this URL to VCC to install packages:</p>
+          <pre id="u"></pre>
+          <p><a href="./index.json">index.json</a></p>
+          <script>document.getElementById('u').textContent = location.origin + location.pathname.replace(/index\.html$/, '') + 'index.json';</script>
+          EOF
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
