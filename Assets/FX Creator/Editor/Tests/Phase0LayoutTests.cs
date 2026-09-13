@@ -39,16 +39,34 @@ namespace colloid.FXCreator.Tests
 		}
 
 		/// <summary>
-		/// グローバル名前空間に型を置かない、が Phase 0 の主目的。
-		/// コンパイラ生成型（&lt;PrivateImplementationDetails&gt; 等）は対象外。
+		/// 自分で書いた型かどうか。コンパイラ生成型（&lt;PrivateImplementationDetails&gt; 等）と、
+		/// Unity が全アセンブリに自動生成して差し込む型
+		/// （UnitySourceGeneratedAssemblyMonoScriptTypes_v1）は対象外。
 		/// </summary>
+		private static bool IsAuthoredType(Type t)
+		{
+			if (t.IsNested)
+			{
+				return false;
+			}
+			if (t.Name.StartsWith("<", StringComparison.Ordinal))
+			{
+				return false;
+			}
+			if (t.Name.StartsWith("UnitySourceGenerated", StringComparison.Ordinal))
+			{
+				return false;
+			}
+			return true;
+		}
+
+		/// <summary>グローバル名前空間に型を置かない、が Phase 0 の主目的。</summary>
 		[Test]
 		public void NoTypesRemainInTheGlobalNamespace()
 		{
 			string[] globals = FxCreatorAssembly.GetTypes()
-				.Where(t => !t.IsNested)
+				.Where(IsAuthoredType)
 				.Where(t => string.IsNullOrEmpty(t.Namespace))
-				.Where(t => !t.Name.StartsWith("<", StringComparison.Ordinal))
 				.Select(t => t.Name)
 				.OrderBy(n => n, StringComparer.Ordinal)
 				.ToArray();
@@ -64,7 +82,7 @@ namespace colloid.FXCreator.Tests
 		public void OnlyOwnedNamespacesArePopulated()
 		{
 			string[] foreign = FxCreatorAssembly.GetTypes()
-				.Where(t => !t.IsNested)
+				.Where(IsAuthoredType)
 				.Select(t => t.Namespace)
 				.Where(ns => !string.IsNullOrEmpty(ns))
 				.Distinct()
