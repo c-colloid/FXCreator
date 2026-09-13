@@ -21,7 +21,12 @@ namespace colloid.FXCreator.AnimatorGraph
 		/// <summary>ポートに出す表示名（"True" / "False" / threshold 値）。</summary>
 		public string Label;
 
-		public AnimatorStateTransition Transition;
+		/// <summary>
+		/// State からの遷移は <see cref="AnimatorStateTransition"/>、
+		/// Entry / サブステートマシンからの遷移は <see cref="AnimatorTransition"/>。
+		/// 畳み込みはどちらも同じ規則で扱えるので基底型で持つ。
+		/// </summary>
+		public AnimatorTransitionBase Transition;
 	}
 
 	/// <summary>
@@ -30,6 +35,9 @@ namespace colloid.FXCreator.AnimatorGraph
 	/// 資料の中間ノードは「条件を持った実体」ではなく<b>遷移群の表現</b>と定義する。
 	/// Controller から決定的に導出できるので、1:1 と完全ラウンドトリップを両立できる
 	/// （逆変換は遷移の1フィールド書き換えに落ちる）。
+	///
+	/// 分岐元は State に限らない。Entry / Any State / サブステートマシンも
+	/// 「outgoing transitions を持つ点」として同じ規則で畳み込む（§4.2.1）。
 	/// </summary>
 	public sealed class AcTransitionGroup
 	{
@@ -44,7 +52,12 @@ namespace colloid.FXCreator.AnimatorGraph
 
 		public AcGroupKind Kind { get; set; }
 
-		public AnimatorState Source { get; set; }
+		/// <summary>
+		/// 分岐元。State / Entry / Any / StateMachine のいずれか。
+		/// 特殊ノードは実体を持たないので、<see cref="AcNodeRef.Target"/> には
+		/// 所属ステートマシンが入る（<see cref="AcNodeRef"/> と同じ規約）。
+		/// </summary>
+		public AcNodeRef SourceRef { get; set; }
 
 		public string Parameter { get; set; }
 
@@ -57,12 +70,35 @@ namespace colloid.FXCreator.AnimatorGraph
 		public List<string> PortLabels { get; } = new List<string>();
 
 		/// <summary>
-		/// グラフ上の安定ID。元ステートとパラメータ名で決まるので、
+		/// グラフ上の安定ID。分岐元とパラメータ名で決まるので、
 		/// 作り直しをまたいで選択が生き残る。
 		/// </summary>
 		public string Id
 		{
-			get { return "g:" + (Source != null ? Source.GetInstanceID() : 0) + ":" + Parameter; }
+			get { return "g:" + SourceRef.Id + ":" + Parameter; }
+		}
+
+		/// <summary>サイドカーのキーになるオブジェクト（State か所属ステートマシン）。</summary>
+		public UnityEngine.Object SourceOwner
+		{
+			get { return SourceRef.Target; }
+		}
+
+		/// <summary>インスペクタに出す「どこから分岐しているか」。</summary>
+		public string SourceLabel
+		{
+			get
+			{
+				switch (SourceRef.Kind)
+				{
+					case AcNodeKind.Entry: return "Entry";
+					case AcNodeKind.Any: return "Any State";
+					case AcNodeKind.StateMachine:
+						return SourceRef.Target != null ? SourceRef.Target.name : "Sub-State Machine";
+					default:
+						return SourceRef.Target != null ? SourceRef.Target.name : "?";
+				}
+			}
 		}
 	}
 
@@ -75,7 +111,7 @@ namespace colloid.FXCreator.AnimatorGraph
 		public readonly List<AcTransitionGroup> Groups = new List<AcTransitionGroup>();
 
 		/// <summary>畳み込まれなかった遷移。直結エッジとして描く。</summary>
-		public readonly List<AnimatorStateTransition> Ungrouped = new List<AnimatorStateTransition>();
+		public readonly List<AnimatorTransitionBase> Ungrouped = new List<AnimatorTransitionBase>();
 	}
 
 	/// <summary>
@@ -87,8 +123,10 @@ namespace colloid.FXCreator.AnimatorGraph
 		/// <summary>
 		/// 畳み込みの候補になる遷移か。条件が1つだけで、Exit Time を使わず、
 		/// ミュート/ソロされていないもの。それ以外は「まとめると情報が落ちる」ので触らない。
+		/// Entry / ステートマシン遷移は Exit Time を持たないので、その検査は
+		/// <see cref="AnimatorStateTransition"/> のときだけ効く。
 		/// </summary>
-		public static bool IsCandidate(AnimatorStateTransition transition)
+		public static bool IsCandidate(AnimatorTransitionBase transition)
 		{
 			if (transition == null)
 			{
@@ -98,37 +136,51 @@ namespace colloid.FXCreator.AnimatorGraph
 			{
 				return false;
 			}
-			if (transition.hasExitTime)
+			var stateTransition = transition as AnimatorStateTransition;
+			if (stateTransition != null && stateTransition.hasExitTime)
 			{
 				return false;
 			}
 			return !transition.mute && !transition.solo;
 		}
 
+		/// <summary>State の outgoing transitions を畳み込む。</summary>
+		public static AcGroupingResult Collapse(
+			AnimatorState state, Func<AcNodeRef, string, bool> isExpanded = null)
+		{
+			if (state == null)
+			{
+				return new AcGroupingResult();
+			}
+			return Collapse(
+				new AcNodeRef(AcNodeKind.State, state),
+				state.transitions,
+				isExpanded);
+		}
+
 		/// <summary>
-		/// <paramref name="state"/> の outgoing transitions を畳み込む。
-		/// <paramref name="isExpanded"/> が true を返す (state, parameter) は
+		/// 任意の分岐元の outgoing transitions を畳み込む。
+		/// <paramref name="isExpanded"/> が true を返す (分岐元, parameter) は
 		/// 畳み込まず直結エッジのままにする（右クリックの Expand 用）。
 		/// </summary>
 		public static AcGroupingResult Collapse(
-			AnimatorState state, Func<AnimatorState, string, bool> isExpanded = null)
+			AcNodeRef source,
+			AnimatorTransitionBase[] transitions,
+			Func<AcNodeRef, string, bool> isExpanded = null)
 		{
 			var result = new AcGroupingResult();
-			if (state == null)
+			if (transitions == null || transitions.Length == 0)
 			{
 				return result;
 			}
 
-			AnimatorStateTransition[] transitions = state.transitions;
-
 			// パラメータごとに候補を集める。出現順を覚えておくと結果の順序が決まる。
-			var buckets = new Dictionary<string, List<AnimatorStateTransition>>(StringComparer.Ordinal);
+			var buckets = new Dictionary<string, List<AnimatorTransitionBase>>(StringComparer.Ordinal);
 			var order = new List<string>();
-			var candidates = new HashSet<AnimatorStateTransition>();
 
 			for (int i = 0; i < transitions.Length; i++)
 			{
-				AnimatorStateTransition transition = transitions[i];
+				AnimatorTransitionBase transition = transitions[i];
 				if (!IsCandidate(transition))
 				{
 					continue;
@@ -140,34 +192,33 @@ namespace colloid.FXCreator.AnimatorGraph
 					continue;
 				}
 
-				List<AnimatorStateTransition> bucket;
+				List<AnimatorTransitionBase> bucket;
 				if (!buckets.TryGetValue(parameter, out bucket))
 				{
-					bucket = new List<AnimatorStateTransition>();
+					bucket = new List<AnimatorTransitionBase>();
 					buckets.Add(parameter, bucket);
 					order.Add(parameter);
 				}
 				bucket.Add(transition);
-				candidates.Add(transition);
 			}
 
-			var grouped = new HashSet<AnimatorStateTransition>();
+			var grouped = new HashSet<AnimatorTransitionBase>();
 			for (int i = 0; i < order.Count; i++)
 			{
 				string parameter = order[i];
-				List<AnimatorStateTransition> bucket = buckets[parameter];
+				List<AnimatorTransitionBase> bucket = buckets[parameter];
 
 				// 1本しかないなら畳み込まない（中間ノードを挟む意味がない）。
 				if (bucket.Count < 2)
 				{
 					continue;
 				}
-				if (isExpanded != null && isExpanded(state, parameter))
+				if (isExpanded != null && isExpanded(source, parameter))
 				{
 					continue;
 				}
 
-				AcTransitionGroup group = TryBuildGroup(state, parameter, bucket);
+				AcTransitionGroup group = TryBuildGroup(source, parameter, bucket);
 				if (group == null)
 				{
 					continue;
@@ -197,7 +248,7 @@ namespace colloid.FXCreator.AnimatorGraph
 		/// null を返し、呼び出し側が直結エッジに落とす。
 		/// </summary>
 		private static AcTransitionGroup TryBuildGroup(
-			AnimatorState state, string parameter, List<AnimatorStateTransition> bucket)
+			AcNodeRef source, string parameter, List<AnimatorTransitionBase> bucket)
 		{
 			bool allBool = true;
 			bool hasIf = false;
@@ -229,19 +280,19 @@ namespace colloid.FXCreator.AnimatorGraph
 			// toggle: If / IfNot だけで、両方が1本以上ある。
 			if (allBool && hasIf && hasIfNot)
 			{
-				return BuildToggle(state, parameter, bucket);
+				return BuildToggle(source, parameter, bucket);
 			}
 
 			// switch: すべて Equals で、threshold が相異なる。
 			if (allEquals && HasDistinctThresholds(bucket))
 			{
-				return BuildSwitch(state, parameter, bucket);
+				return BuildSwitch(source, parameter, bucket);
 			}
 
 			return null;
 		}
 
-		private static bool HasDistinctThresholds(List<AnimatorStateTransition> bucket)
+		private static bool HasDistinctThresholds(List<AnimatorTransitionBase> bucket)
 		{
 			var seen = new HashSet<float>();
 			for (int i = 0; i < bucket.Count; i++)
@@ -256,12 +307,12 @@ namespace colloid.FXCreator.AnimatorGraph
 		}
 
 		private static AcTransitionGroup BuildToggle(
-			AnimatorState state, string parameter, List<AnimatorStateTransition> bucket)
+			AcNodeRef source, string parameter, List<AnimatorTransitionBase> bucket)
 		{
 			var group = new AcTransitionGroup
 			{
 				Kind = AcGroupKind.Toggle,
-				Source = state,
+				SourceRef = source,
 				Parameter = parameter
 			};
 
@@ -270,7 +321,7 @@ namespace colloid.FXCreator.AnimatorGraph
 				bool isTrue = bucket[i].conditions[0].mode == AnimatorConditionMode.If;
 				group.Branches.Add(new AcGroupBranch
 				{
-					PortId = isTrue ? AcTransitionGroup.TruePort : AcTransitionGroup.FalsePort,
+					PortId = isTrue ? TruePort : FalsePort,
 					Label = isTrue ? "True" : "False",
 					Transition = bucket[i]
 				});
@@ -284,13 +335,16 @@ namespace colloid.FXCreator.AnimatorGraph
 			return group;
 		}
 
+		private const string TruePort = AcTransitionGroup.TruePort;
+		private const string FalsePort = AcTransitionGroup.FalsePort;
+
 		private static AcTransitionGroup BuildSwitch(
-			AnimatorState state, string parameter, List<AnimatorStateTransition> bucket)
+			AcNodeRef source, string parameter, List<AnimatorTransitionBase> bucket)
 		{
 			var group = new AcTransitionGroup
 			{
 				Kind = AcGroupKind.Switch,
-				Source = state,
+				SourceRef = source,
 				Parameter = parameter
 			};
 

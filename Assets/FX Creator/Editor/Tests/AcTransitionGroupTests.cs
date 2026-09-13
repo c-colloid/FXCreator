@@ -100,7 +100,7 @@ namespace colloid.FXCreator.Tests
 		/// </summary>
 		private static void AssertIsPartitionOf(AnimatorState state, AcGroupingResult result)
 		{
-			var seen = new List<AnimatorStateTransition>();
+			var seen = new List<AnimatorTransitionBase>();
 			foreach (AcTransitionGroup group in result.Groups)
 			{
 				foreach (AcGroupBranch branch in group.Branches)
@@ -110,7 +110,7 @@ namespace colloid.FXCreator.Tests
 			}
 			seen.AddRange(result.Ungrouped);
 
-			AnimatorStateTransition[] original = state.transitions;
+			AnimatorTransitionBase[] original = state.transitions;
 
 			Assert.That(seen.Count, Is.EqualTo(original.Length),
 				"遷移の総数が合わない（取りこぼしか重複がある）");
@@ -271,7 +271,7 @@ namespace colloid.FXCreator.Tests
 			AcGroupingResult result = AcTransitionGrouping.Collapse(from);
 
 			Assert.That(result.Groups.Count, Is.EqualTo(1));
-			Assert.That(result.Ungrouped, Is.EqualTo(new[] { loose }));
+			Assert.That(result.Ungrouped, Is.EqualTo(new AnimatorTransitionBase[] { loose }));
 			AssertIsPartitionOf(from, result);
 		}
 
@@ -332,12 +332,111 @@ namespace colloid.FXCreator.Tests
 			Transition(from, off, "Switch", AnimatorConditionMode.IfNot);
 
 			AcGroupingResult result = AcTransitionGrouping.Collapse(
-				from, (state, parameter) => parameter == "Switch");
+				from, (source, parameter) => parameter == "Switch");
 
 			// Expand は Controller を変えず、描き方だけを変える（§4.2）。
 			Assert.That(result.Groups, Is.Empty);
 			Assert.That(result.Ungrouped.Count, Is.EqualTo(2));
 			AssertIsPartitionOf(from, result);
+		}
+
+		#endregion
+
+		#region Sources other than a state (section 4.2.1)
+
+		/// <summary>
+		/// 実アバターで実際に効くのはこの形。VRChat の FX は Entry が
+		/// GestureLeft/Right や FacialExpression の値ごとに分岐している。
+		/// </summary>
+		[Test]
+		public void EntryTransitionsCollapseIntoASwitch()
+		{
+			AnimatorStateMachine sm = NewStateMachine();
+			AnimatorState a = sm.AddState("A");
+			AnimatorState b = sm.AddState("B");
+			AnimatorState c = sm.AddState("C");
+			AddEntry(sm, a, "Gesture", AnimatorConditionMode.Equals, 1f);
+			AddEntry(sm, b, "Gesture", AnimatorConditionMode.Equals, 2f);
+			AddEntry(sm, c, "Gesture", AnimatorConditionMode.Equals, 3f);
+
+			var source = new AcNodeRef(AcNodeKind.Entry, sm);
+			AcGroupingResult result = AcTransitionGrouping.Collapse(source, sm.entryTransitions);
+
+			Assert.That(result.Groups.Count, Is.EqualTo(1));
+			AcTransitionGroup group = result.Groups[0];
+			Assert.That(group.Kind, Is.EqualTo(AcGroupKind.Switch));
+			Assert.That(group.SourceRef.Kind, Is.EqualTo(AcNodeKind.Entry));
+			Assert.That(group.PortLabels, Is.EqualTo(new[] { "1", "2", "3" }));
+			Assert.That(group.SourceLabel, Is.EqualTo("Entry"));
+		}
+
+		[Test]
+		public void AnyStateTransitionsCollapseToo()
+		{
+			AnimatorStateMachine sm = NewStateMachine();
+			AnimatorState on = sm.AddState("On");
+			AnimatorState off = sm.AddState("Off");
+			AnimatorStateTransition t1 = sm.AddAnyStateTransition(on);
+			t1.hasExitTime = false;
+			t1.AddCondition(AnimatorConditionMode.If, 0f, "Switch");
+			AnimatorStateTransition t2 = sm.AddAnyStateTransition(off);
+			t2.hasExitTime = false;
+			t2.AddCondition(AnimatorConditionMode.IfNot, 0f, "Switch");
+
+			var source = new AcNodeRef(AcNodeKind.Any, sm);
+			AcGroupingResult result = AcTransitionGrouping.Collapse(source, sm.anyStateTransitions);
+
+			Assert.That(result.Groups.Count, Is.EqualTo(1));
+			Assert.That(result.Groups[0].Kind, Is.EqualTo(AcGroupKind.Toggle));
+			Assert.That(result.Groups[0].SourceLabel, Is.EqualTo("Any State"));
+		}
+
+		/// <summary>
+		/// Entry と Any は所属ステートマシンを Target に持つので、ID に種類が
+		/// 入っていないと同名パラメータのグループ同士が衝突する。
+		/// </summary>
+		[Test]
+		public void GroupsFromDifferentSourceKindsDoNotShareAnId()
+		{
+			AnimatorStateMachine sm = NewStateMachine();
+			AnimatorState on = sm.AddState("On");
+			AnimatorState off = sm.AddState("Off");
+
+			AddEntry(sm, on, "Switch", AnimatorConditionMode.If, 0f);
+			AddEntry(sm, off, "Switch", AnimatorConditionMode.IfNot, 0f);
+
+			AnimatorStateTransition a1 = sm.AddAnyStateTransition(on);
+			a1.hasExitTime = false;
+			a1.AddCondition(AnimatorConditionMode.If, 0f, "Switch");
+			AnimatorStateTransition a2 = sm.AddAnyStateTransition(off);
+			a2.hasExitTime = false;
+			a2.AddCondition(AnimatorConditionMode.IfNot, 0f, "Switch");
+
+			string entryId = AcTransitionGrouping
+				.Collapse(new AcNodeRef(AcNodeKind.Entry, sm), sm.entryTransitions).Groups[0].Id;
+			string anyId = AcTransitionGrouping
+				.Collapse(new AcNodeRef(AcNodeKind.Any, sm), sm.anyStateTransitions).Groups[0].Id;
+
+			Assert.That(entryId, Is.Not.EqualTo(anyId));
+		}
+
+		/// <summary>Entry / ステートマシン遷移は Exit Time を持たないので、その検査で落ちない。</summary>
+		[Test]
+		public void TransitionsWithoutExitTimeSupportAreStillCandidates()
+		{
+			AnimatorStateMachine sm = NewStateMachine();
+			AnimatorState a = sm.AddState("A");
+			AnimatorTransition entry = AddEntry(sm, a, "Gesture", AnimatorConditionMode.Equals, 1f);
+
+			Assert.That(AcTransitionGrouping.IsCandidate(entry), Is.True);
+		}
+
+		private static AnimatorTransition AddEntry(
+			AnimatorStateMachine sm, AnimatorState to, string parameter, AnimatorConditionMode mode, float threshold)
+		{
+			AnimatorTransition transition = sm.AddEntryTransition(to);
+			transition.AddCondition(mode, threshold, parameter);
+			return transition;
 		}
 
 		#endregion

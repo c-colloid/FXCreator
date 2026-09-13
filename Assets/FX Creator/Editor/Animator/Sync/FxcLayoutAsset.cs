@@ -26,7 +26,20 @@ namespace colloid.FXCreator.AnimatorGraph
 		[Serializable]
 		public class CondNodeLayout
 		{
-			public AnimatorState sourceState;
+			/// <summary>
+			/// 分岐元。State のこともあれば、Entry / Any の所属ステートマシンのこともある
+			/// （§4.2.1 で分岐元を State 以外にも広げたため）。
+			/// どちらも Controller のサブアセットなので参照が永続化される。
+			/// </summary>
+			public UnityEngine.Object sourceOwner;
+
+			/// <summary>
+			/// 分岐元の種類。Entry と Any State は所属ステートマシンを
+			/// <see cref="sourceOwner"/> に入れるので同じ値になり、これが無いと
+			/// 同名パラメータのグループ同士が同じエントリを取り合う。
+			/// </summary>
+			public AcNodeKind sourceKind;
+
 			public string parameter;
 			public Vector2 position;
 
@@ -110,7 +123,7 @@ namespace colloid.FXCreator.AnimatorGraph
 		/// <summary>参照が切れたエントリを落とす。壊れたサイドカーで落ちないための掃除。</summary>
 		private static void Prune(FxcLayoutAsset asset)
 		{
-			int removed = asset.condNodes.RemoveAll(e => e == null || e.sourceState == null);
+			int removed = asset.condNodes.RemoveAll(e => e == null || e.sourceOwner == null);
 			removed += asset.nodeExtras.RemoveAll(e => e == null || e.target == null);
 			if (removed > 0)
 			{
@@ -143,12 +156,13 @@ namespace colloid.FXCreator.AnimatorGraph
 			return created;
 		}
 
-		private static bool Matches(FxcLayoutAsset.CondNodeLayout entry, AnimatorState state, string parameter)
+		private static bool Matches(FxcLayoutAsset.CondNodeLayout entry, UnityEngine.Object owner, AcNodeKind kind, string parameter)
 		{
-			return entry.sourceState == state && string.Equals(entry.parameter, parameter, StringComparison.Ordinal);
+			return entry.sourceOwner == owner && entry.sourceKind == kind
+				&& string.Equals(entry.parameter, parameter, StringComparison.Ordinal);
 		}
 
-		private FxcLayoutAsset.CondNodeLayout Find(AnimatorState state, string parameter)
+		private FxcLayoutAsset.CondNodeLayout Find(UnityEngine.Object owner, AcNodeKind kind, string parameter)
 		{
 			FxcLayoutAsset asset = Asset;
 			if (asset == null)
@@ -157,7 +171,7 @@ namespace colloid.FXCreator.AnimatorGraph
 			}
 			for (int i = 0; i < asset.condNodes.Count; i++)
 			{
-				if (Matches(asset.condNodes[i], state, parameter))
+				if (Matches(asset.condNodes[i], owner, kind, parameter))
 				{
 					return asset.condNodes[i];
 				}
@@ -165,15 +179,15 @@ namespace colloid.FXCreator.AnimatorGraph
 			return null;
 		}
 
-		public bool IsExpanded(AnimatorState state, string parameter)
+		public bool IsExpanded(UnityEngine.Object owner, AcNodeKind kind, string parameter)
 		{
-			FxcLayoutAsset.CondNodeLayout entry = Find(state, parameter);
+			FxcLayoutAsset.CondNodeLayout entry = Find(owner, kind, parameter);
 			return entry != null && entry.expanded;
 		}
 
-		public bool TryGetPosition(AnimatorState state, string parameter, out Vector2 position)
+		public bool TryGetPosition(UnityEngine.Object owner, AcNodeKind kind, string parameter, out Vector2 position)
 		{
-			FxcLayoutAsset.CondNodeLayout entry = Find(state, parameter);
+			FxcLayoutAsset.CondNodeLayout entry = Find(owner, kind, parameter);
 			if (entry == null)
 			{
 				position = Vector2.zero;
@@ -183,19 +197,19 @@ namespace colloid.FXCreator.AnimatorGraph
 			return true;
 		}
 
-		public void SetExpanded(AnimatorState state, string parameter, bool expanded)
+		public void SetExpanded(UnityEngine.Object owner, AcNodeKind kind, string parameter, bool expanded)
 		{
-			Write(state, parameter, entry => entry.expanded = expanded);
+			Write(owner, kind, parameter, entry => entry.expanded = expanded);
 		}
 
-		public void SetPosition(AnimatorState state, string parameter, Vector2 position)
+		public void SetPosition(UnityEngine.Object owner, AcNodeKind kind, string parameter, Vector2 position)
 		{
-			Write(state, parameter, entry => entry.position = position);
+			Write(owner, kind, parameter, entry => entry.position = position);
 		}
 
-		private void Write(AnimatorState state, string parameter, Action<FxcLayoutAsset.CondNodeLayout> apply)
+		private void Write(UnityEngine.Object owner, AcNodeKind kind, string parameter, Action<FxcLayoutAsset.CondNodeLayout> apply)
 		{
-			if (state == null)
+			if (owner == null)
 			{
 				return;
 			}
@@ -211,7 +225,7 @@ namespace colloid.FXCreator.AnimatorGraph
 			FxcLayoutAsset.CondNodeLayout entry = null;
 			for (int i = 0; i < asset.condNodes.Count; i++)
 			{
-				if (Matches(asset.condNodes[i], state, parameter))
+				if (Matches(asset.condNodes[i], owner, kind, parameter))
 				{
 					entry = asset.condNodes[i];
 					break;
@@ -219,7 +233,7 @@ namespace colloid.FXCreator.AnimatorGraph
 			}
 			if (entry == null)
 			{
-				entry = new FxcLayoutAsset.CondNodeLayout { sourceState = state, parameter = parameter };
+				entry = new FxcLayoutAsset.CondNodeLayout { sourceOwner = owner, sourceKind = kind, parameter = parameter };
 				asset.condNodes.Add(entry);
 			}
 

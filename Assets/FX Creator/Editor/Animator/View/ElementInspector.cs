@@ -30,7 +30,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		private AcTransitionGroup _group;
 
 		/// <summary>畳み込みノードの Expand を押されたときに呼ぶ（サイドカーを触るのはソース側）。</summary>
-		public System.Action<AnimatorState, string, bool> SetGroupExpanded;
+		public System.Action<UnityEngine.Object, AcNodeKind, string, bool> SetGroupExpanded;
 
 		/// <summary>いま畳み込みノードを出しているか。グループが消えたときの片付け判定に使う。</summary>
 		public bool IsShowingGroup => _group != null;
@@ -282,7 +282,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		private void BuildGroupFields(AcTransitionGroup group)
 		{
 			_body.Add(PassthroughNote(
-				group.Branches.Count + " 本の遷移をまとめています（" + group.Source.name + " から）"));
+				group.Branches.Count + " 本の遷移をまとめています（" + group.SourceLabel + " から）"));
 
 			// パラメータの付け替え。型が合わないものを選ぶと畳み込みが崩れるので、
 			// toggle には bool、switch には int だけを出す。
@@ -366,7 +366,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				if (SetGroupExpanded != null)
 				{
-					SetGroupExpanded(group.Source, group.Parameter, true);
+					SetGroupExpanded(group.SourceOwner, group.SourceRef.Kind, group.Parameter, true);
 				}
 			})
 			{

@@ -79,8 +79,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			_inspector = new ElementInspector();
 			// 畳み込みの解除はサイドカーを触るのでソース側に任せる。
-			_inspector.SetGroupExpanded = (state, parameter, expanded) =>
-				_source.SetGroupExpanded(state, parameter, expanded);
+			_inspector.SetGroupExpanded = (owner, kind, parameter, expanded) =>
+				_source.SetGroupExpanded(owner, kind, parameter, expanded);
 			rightSplit.Add(_inspector);
 
 			_breadcrumb = new VisualElement
