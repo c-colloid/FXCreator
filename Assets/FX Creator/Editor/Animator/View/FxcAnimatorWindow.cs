@@ -83,6 +83,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			// 畳み込みの解除はサイドカーを触るのでソース側に任せる。
 			_inspector.SetGroupExpanded = (owner, kind, parameter, expanded) =>
 				_source.SetGroupExpanded(owner, kind, parameter, expanded);
+			_inspector.GetPreviewFraming = state => _source.GetPreviewFraming(state);
+			_inspector.SetPreviewFraming = (state, framing) => _source.SetPreviewFraming(state, framing);
 			rightSplit.Add(_inspector);
 
 			_breadcrumb = new VisualElement
@@ -462,7 +464,11 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				case AcNodeKind.State:
 				case AcNodeKind.StateMachine:
-					return new StateNodeView(owner) { ServiceProvider = PreviewService };
+					return new StateNodeView(owner)
+					{
+						ServiceProvider = PreviewService,
+						FramingProvider = state => _source.GetPreviewFraming(state)
+					};
 				case AcNodeKind.Group:
 					return new GroupNodeView(owner);
 				default:

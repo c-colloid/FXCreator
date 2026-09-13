@@ -31,6 +31,9 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		/// <summary>要求先を差し込むための口。ウィンドウがノード生成時に渡す。</summary>
 		public Func<AvatarPreviewService> ServiceProvider;
 
+		/// <summary>この State のプレビューの構え方を引く（サイドカー §4.4）。</summary>
+		public Func<AnimatorState, PreviewFraming> FramingProvider;
+
 		private readonly Label _info;
 		private readonly VisualElement _previewBox;
 		private readonly Image _preview;
@@ -39,6 +42,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		private bool _isDefault;
 		private AnimationClip _clip;
 		private bool _isBlendTree;
+		private AnimatorState _state;
 
 		public StateNodeView(FXCGraphView owner) : base(owner)
 		{
@@ -100,9 +104,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_info.text = hasInfo ? info : string.Empty;
 			_info.style.display = hasInfo ? DisplayStyle.Flex : DisplayStyle.None;
 
-			Motion motion = ac != null && ac.Ref.Kind == AcNodeKind.State && ac.Ref.AsState() != null
-				? ac.Ref.AsState().motion
-				: null;
+			_state = ac != null && ac.Ref.Kind == AcNodeKind.State ? ac.Ref.AsState() : null;
+			Motion motion = _state != null ? _state.motion : null;
 			_isBlendTree = motion is BlendTree;
 			AnimationClip clip = motion as AnimationClip;
 			if (clip != _clip)
@@ -144,6 +147,17 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				return;
 			}
 
+			PreviewFraming framing = Framing();
+
+			// 選択中のノードだけ再生する（§5.2-5）。他は静止フレームのまま。
+			// 再生フレームはキャッシュに入らないので、静止プレビューを押し出さない。
+			if (Selected && _clip.length > 0f)
+			{
+				service.StartPlaying(this, _clip, RenderSize, framing, OnRendered);
+				return;
+			}
+			service.StopPlaying(this);
+
 			// 既に絵があっても要求し直す。キャッシュに当たれば即返るうえ、
 			// LRU の先頭に来るので「見えているノードの絵が追い出される」ことがなくなる。
 			service.Request(new PreviewRequest
@@ -152,10 +166,19 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				Clip = _clip,
 				Time = 0f,
 				Size = RenderSize,
-				Focus = HumanBodyBones.Head,
-				Fov = 30f,
+				Focus = framing.Focus,
+				Fov = framing.Fov,
 				OnRendered = OnRendered
 			});
+		}
+
+		private PreviewFraming Framing()
+		{
+			if (FramingProvider == null || _state == null)
+			{
+				return PreviewFraming.Default;
+			}
+			return FramingProvider(_state);
 		}
 
 		private void OnRendered(Texture texture)
@@ -175,6 +198,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			if (service != null)
 			{
 				service.CancelAll(this);
+				service.StopPlaying(this);
 			}
 		}
 
@@ -217,6 +241,10 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			// 既定ステートは標準 Animator ウィンドウでもオレンジ。太字で一目で分かるようにする。
 			TitleLabel.style.unityFontStyleAndWeight = _isDefault ? FontStyle.Bold : FontStyle.Normal;
+
+			// 選択が変わるとここが呼ばれる。再生の開始・停止はその流れに乗せる
+			// （選択中のノードだけ動く、というのが §5.2-5 の決めごと）。
+			UpdatePreview();
 		}
 	}
 }

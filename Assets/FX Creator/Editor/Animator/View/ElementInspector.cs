@@ -35,6 +35,11 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		/// <summary>いま畳み込みノードを出しているか。グループが消えたときの片付け判定に使う。</summary>
 		public bool IsShowingGroup => _group != null;
 
+		/// <summary>プレビューの構え方の読み書き（サイドカー §4.4）。Controller は変えない。</summary>
+		public Func<AnimatorState, Preview.PreviewFraming> GetPreviewFraming;
+
+		public Action<AnimatorState, Preview.PreviewFraming> SetPreviewFraming;
+
 		/// <summary>値を流し込んでいる最中か。UI 起点の変更と区別してループを防ぐ。</summary>
 		private bool _syncing;
 
@@ -263,6 +268,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			Track(() => mirror.SetValueWithoutNotify(state.mirror));
 			_body.Add(mirror);
 
+			BuildPreviewFields(state);
+
 			// R4: 触らないと決めたものは、隠さずに件数だけ知らせる。
 			if (state.behaviours != null && state.behaviours.Length > 0)
 			{
@@ -273,6 +280,68 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				_body.Add(PassthroughNote("BlendTree の中身は標準インスペクタで編集してください"));
 			}
+		}
+
+		/// <summary>
+		/// プレビューの寄り先と画角（§5.2-6 / §4.4）。Controller ではなく
+		/// サイドカーに入るので、ここだけ <see cref="AcEdit"/> を通さない。
+		/// </summary>
+		private void BuildPreviewFields(AnimatorState state)
+		{
+			if (GetPreviewFraming == null || SetPreviewFraming == null)
+			{
+				return;
+			}
+
+			var header = new Label("Preview");
+			header.style.unityFontStyleAndWeight = FontStyle.Bold;
+			header.style.marginTop = 6f;
+			_body.Add(header);
+
+			Preview.PreviewFraming current = GetPreviewFraming(state);
+
+			var names = new List<string>();
+			for (int i = 0; i < Preview.PreviewFraming.Choices.Length; i++)
+			{
+				names.Add(Preview.PreviewFraming.LabelOf(Preview.PreviewFraming.Choices[i]));
+			}
+
+			var focus = new DropdownField("寄り先")
+			{
+				choices = names,
+				value = Preview.PreviewFraming.LabelOf(current.Focus)
+			};
+			focus.RegisterValueChangedCallback(evt =>
+			{
+				if (_syncing)
+				{
+					return;
+				}
+				int index = names.IndexOf(evt.newValue);
+				if (index < 0)
+				{
+					return;
+				}
+				Preview.PreviewFraming next = GetPreviewFraming(state);
+				next.Focus = Preview.PreviewFraming.Choices[index];
+				SetPreviewFraming(state, next);
+			});
+			_body.Add(focus);
+
+			var fov = new Slider("画角", 10f, 70f) { value = current.Fov };
+			fov.RegisterValueChangedCallback(evt =>
+			{
+				if (_syncing)
+				{
+					return;
+				}
+				Preview.PreviewFraming next = GetPreviewFraming(state);
+				next.Fov = evt.newValue;
+				SetPreviewFraming(state, next);
+			});
+			_body.Add(fov);
+
+			_body.Add(PassthroughNote("選択中のノードだけ再生されます"));
 		}
 
 		/// <summary>

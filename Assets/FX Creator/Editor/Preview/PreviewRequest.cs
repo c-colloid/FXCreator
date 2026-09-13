@@ -43,6 +43,44 @@ namespace colloid.FXCreator.Preview
 		}
 	}
 
+	/// <summary>
+	/// カメラの構え方（Docs/FXCreator-Design.md §4.4 の <c>previewFocus</c> / <c>previewFov</c>）。
+	/// State ごとに変えられるので、口の動きは顔に寄せ、手の形は手に寄せる、といった使い分けができる。
+	/// </summary>
+	public struct PreviewFraming
+	{
+		public HumanBodyBones Focus;
+		public float Fov;
+
+		public static PreviewFraming Default
+		{
+			get { return new PreviewFraming { Focus = HumanBodyBones.Head, Fov = 30f }; }
+		}
+
+		/// <summary>プレビューで選べる寄り先。人型アバターで意味のあるものだけに絞る。</summary>
+		public static readonly HumanBodyBones[] Choices =
+		{
+			HumanBodyBones.Head,
+			HumanBodyBones.Chest,
+			HumanBodyBones.Hips,
+			HumanBodyBones.LeftHand,
+			HumanBodyBones.RightHand
+		};
+
+		public static string LabelOf(HumanBodyBones bone)
+		{
+			switch (bone)
+			{
+				case HumanBodyBones.Head: return "顔";
+				case HumanBodyBones.Chest: return "上半身";
+				case HumanBodyBones.Hips: return "全身";
+				case HumanBodyBones.LeftHand: return "左手";
+				case HumanBodyBones.RightHand: return "右手";
+				default: return bone.ToString();
+			}
+		}
+	}
+
 	/// <summary>キャッシュのキー。構造体なので辞書に入れても割り当てが起きない。</summary>
 	public struct PreviewKey : IEquatable<PreviewKey>
 	{

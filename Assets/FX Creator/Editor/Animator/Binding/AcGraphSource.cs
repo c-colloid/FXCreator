@@ -466,6 +466,25 @@ namespace colloid.FXCreator.AnimatorGraph
 			return _layout != null && _layout.IsExpanded(source.Target, source.Kind, parameter);
 		}
 
+		/// <summary>
+		/// プレビューの構え方（§4.4）。サイドカーが無ければ既定を返すだけなので、
+		/// 読むだけならアセットは作られない。
+		/// </summary>
+		public Preview.PreviewFraming GetPreviewFraming(UnityEngine.Object target)
+		{
+			return _layout != null ? _layout.GetFraming(target) : Preview.PreviewFraming.Default;
+		}
+
+		public void SetPreviewFraming(UnityEngine.Object target, Preview.PreviewFraming framing)
+		{
+			if (_layout == null)
+			{
+				return;
+			}
+			_layout.SetFraming(target, framing);
+			Refresh();
+		}
+
 		/// <summary>畳み込みを解除する / 戻す。Controller は一切変えない（§4.2）。</summary>
 		public void SetGroupExpanded(UnityEngine.Object sourceOwner, AcNodeKind kind, string parameter, bool expanded)
 		{

@@ -241,6 +241,66 @@ namespace colloid.FXCreator.AnimatorGraph
 			EditorUtility.SetDirty(asset);
 		}
 
+		#region Node extras (preview framing)
+
+		/// <summary>
+		/// プレビューの構え方（§4.4 の <c>previewFocus</c> / <c>previewFov</c>）。
+		/// 保存が無ければ既定（顔・30度）。
+		/// </summary>
+		public Preview.PreviewFraming GetFraming(UnityEngine.Object target)
+		{
+			FxcLayoutAsset.NodeExtra extra = FindExtra(target);
+			if (extra == null)
+			{
+				return Preview.PreviewFraming.Default;
+			}
+			return new Preview.PreviewFraming { Focus = extra.previewFocus, Fov = extra.previewFov };
+		}
+
+		public void SetFraming(UnityEngine.Object target, Preview.PreviewFraming framing)
+		{
+			if (target == null)
+			{
+				return;
+			}
+			FxcLayoutAsset asset = Require();
+			if (asset == null)
+			{
+				return;
+			}
+
+			Undo.RegisterCompleteObjectUndo(asset, "Edit Preview");
+
+			FxcLayoutAsset.NodeExtra extra = FindExtra(target);
+			if (extra == null)
+			{
+				extra = new FxcLayoutAsset.NodeExtra { target = target };
+				asset.nodeExtras.Add(extra);
+			}
+			extra.previewFocus = framing.Focus;
+			extra.previewFov = framing.Fov;
+			EditorUtility.SetDirty(asset);
+		}
+
+		private FxcLayoutAsset.NodeExtra FindExtra(UnityEngine.Object target)
+		{
+			FxcLayoutAsset asset = Asset;
+			if (asset == null || target == null)
+			{
+				return null;
+			}
+			for (int i = 0; i < asset.nodeExtras.Count; i++)
+			{
+				if (asset.nodeExtras[i].target == target)
+				{
+					return asset.nodeExtras[i];
+				}
+			}
+			return null;
+		}
+
+		#endregion
+
 		/// <summary>Controller が差し替わったときに読み直させる。</summary>
 		public void Invalidate()
 		{

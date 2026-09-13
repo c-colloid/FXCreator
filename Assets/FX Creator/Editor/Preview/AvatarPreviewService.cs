@@ -180,7 +180,7 @@ namespace colloid.FXCreator.Preview
 		/// </summary>
 		private void WarmUp()
 		{
-			PlaceCamera(HumanBodyBones.Head, 30f);
+			PlaceCamera(PreviewFraming.Default);
 			var warm = new RenderTexture(32, 32, 24, GraphicsFormat.R8G8B8A8_UNorm)
 			{
 				hideFlags = HideFlags.HideAndDontSave
@@ -286,10 +286,16 @@ namespace colloid.FXCreator.Preview
 				return;
 			}
 
+			// 再生は毎フレーム1コマ。静止プレビューより優先する（見ている当人だから）。
+			AdvancePlayback();
+
 			if (_queue.Count == 0)
 			{
-				StopAnimationMode();
-				UnhookUpdate();
+				if (_playingOwner == null)
+				{
+					StopAnimationMode();
+					UnhookUpdate();
+				}
 				return;
 			}
 
@@ -337,6 +343,119 @@ namespace colloid.FXCreator.Preview
 
 		#endregion
 
+		#region Playback
+
+		/// <summary>
+		/// 再生中のノード。<b>1つだけ</b>（§5.2-5）。他のノードは静止フレームのまま。
+		/// </summary>
+		private object _playingOwner;
+		private AnimationClip _playingClip;
+		private PreviewFraming _playingFraming;
+		private Action<Texture> _playingOnFrame;
+		private RenderTexture _playingTexture;
+		private float _playingTime;
+		private double _lastTick;
+
+		public bool IsPlaying(object owner)
+		{
+			return owner != null && _playingOwner == owner;
+		}
+
+		/// <summary>
+		/// このノードの再生を始める。既に別のノードが再生していれば、そちらは止まる。
+		/// 再生フレームは<b>キャッシュに入れない</b>。時刻が毎フレーム変わる＝毎回別のキーになり、
+		/// LRU が静止プレビューを丸ごと押し出してしまうため、専用のテクスチャを使い回す。
+		/// </summary>
+		public void StartPlaying(
+			object owner, AnimationClip clip, Vector2Int size, PreviewFraming framing, Action<Texture> onFrame)
+		{
+			if (_disposed || !IsUsable || owner == null || clip == null || onFrame == null)
+			{
+				return;
+			}
+			if (clip.length <= 0f)
+			{
+				return;
+			}
+
+			if (_playingOwner != owner)
+			{
+				ReleasePlayingTexture();
+				_playingTime = 0f;
+			}
+
+			_playingOwner = owner;
+			_playingClip = clip;
+			_playingFraming = framing;
+			_playingOnFrame = onFrame;
+			_lastTick = EditorApplication.timeSinceStartup;
+
+			int width = Mathf.Max(8, size.x);
+			int height = Mathf.Max(8, size.y);
+			if (_playingTexture == null || _playingTexture.width != width || _playingTexture.height != height)
+			{
+				ReleasePlayingTexture();
+				_playingTexture = new RenderTexture(width, height, 24, GraphicsFormat.R8G8B8A8_UNorm)
+				{
+					hideFlags = HideFlags.HideAndDontSave,
+					name = "FXC Preview (playing)"
+				};
+			}
+
+			HookUpdate();
+		}
+
+		public void StopPlaying(object owner)
+		{
+			if (owner == null || _playingOwner != owner)
+			{
+				return;
+			}
+			_playingOwner = null;
+			_playingClip = null;
+			_playingOnFrame = null;
+			ReleasePlayingTexture();
+		}
+
+		private void ReleasePlayingTexture()
+		{
+			if (_playingTexture == null)
+			{
+				return;
+			}
+			_playingTexture.Release();
+			UnityEngine.Object.DestroyImmediate(_playingTexture);
+			_playingTexture = null;
+		}
+
+		/// <summary>再生を1コマ進める。クリップ末尾で先頭へ戻る。</summary>
+		private void AdvancePlayback()
+		{
+			if (_playingOwner == null || _playingClip == null || _playingTexture == null)
+			{
+				return;
+			}
+
+			double now = EditorApplication.timeSinceStartup;
+			float delta = (float)(now - _lastTick);
+			_lastTick = now;
+			// ウィンドウが止まっていた間の巨大な delta で飛ばないように上限をかける。
+			delta = Mathf.Clamp(delta, 0f, 0.1f);
+
+			_playingTime += delta;
+			if (_playingClip.length > 0f)
+			{
+				_playingTime %= _playingClip.length;
+			}
+
+			Sample(_playingClip, _playingTime);
+			PlaceCamera(_playingFraming);
+			RenderInto(_playingTexture);
+			_playingOnFrame(_playingTexture);
+		}
+
+		#endregion
+
 		#region Rendering
 
 		private RenderTexture Render(PreviewRequest request)
@@ -346,28 +465,40 @@ namespace colloid.FXCreator.Preview
 				return null;
 			}
 
-			StartAnimationMode();
+			Sample(request.Clip, request.Time);
+			PlaceCamera(new PreviewFraming { Focus = request.Focus, Fov = request.Fov });
 
-			AnimationMode.BeginSampling();
-			try
-			{
-				AnimationMode.SampleAnimationClip(_instance, request.Clip, request.Time);
-			}
-			finally
-			{
-				AnimationMode.EndSampling();
-			}
-
-			PlaceCamera(request.Focus, request.Fov);
-
-			int width = Mathf.Max(8, request.Size.x);
-			int height = Mathf.Max(8, request.Size.y);
-			var texture = new RenderTexture(width, height, 24, GraphicsFormat.R8G8B8A8_UNorm)
+			var texture = new RenderTexture(
+				Mathf.Max(8, request.Size.x),
+				Mathf.Max(8, request.Size.y),
+				24,
+				GraphicsFormat.R8G8B8A8_UNorm)
 			{
 				hideFlags = HideFlags.HideAndDontSave,
 				name = "FXC Preview"
 			};
 
+			RenderInto(texture);
+			return texture;
+		}
+
+		/// <summary>アバターをその時刻の姿勢にする。<c>AnimationMode</c> の出入りはここだけ。</summary>
+		private void Sample(AnimationClip clip, float time)
+		{
+			StartAnimationMode();
+			AnimationMode.BeginSampling();
+			try
+			{
+				AnimationMode.SampleAnimationClip(_instance, clip, time);
+			}
+			finally
+			{
+				AnimationMode.EndSampling();
+			}
+		}
+
+		private void RenderInto(RenderTexture texture)
+		{
 			_camera.targetTexture = texture;
 			bool previous = Unsupported.useScriptableRenderPipeline;
 			Unsupported.useScriptableRenderPipeline = GraphicsSettings.currentRenderPipeline != null;
@@ -380,26 +511,24 @@ namespace colloid.FXCreator.Preview
 				Unsupported.useScriptableRenderPipeline = previous;
 				_camera.targetTexture = null;
 			}
-
-			return texture;
 		}
 
 		/// <summary>
 		/// 指定のボーンが画面に収まる位置にカメラを置く。
 		/// アバターの正面（root の forward）側から見る。
 		/// </summary>
-		private void PlaceCamera(HumanBodyBones focus, float fov)
+		private void PlaceCamera(PreviewFraming framing)
 		{
 			Transform bone = null;
 			if (_animator != null && _animator.isHuman)
 			{
-				bone = _animator.GetBoneTransform(focus);
+				bone = _animator.GetBoneTransform(framing.Focus);
 			}
 
 			Vector3 target = bone != null ? bone.position : _instance.transform.position + Vector3.up;
-			float radius = FramingRadius(focus);
+			float radius = FramingRadius(framing.Focus);
 
-			fov = Mathf.Clamp(fov, 5f, 120f);
+			float fov = Mathf.Clamp(framing.Fov, 5f, 120f);
 			_camera.fieldOfView = fov;
 			float distance = radius / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad);
 
@@ -468,6 +597,10 @@ namespace colloid.FXCreator.Preview
 
 			UnhookUpdate();
 			_queue.Clear();
+			_playingOwner = null;
+			_playingClip = null;
+			_playingOnFrame = null;
+			ReleasePlayingTexture();
 			StopAnimationMode();
 			_cache.Dispose();
 
