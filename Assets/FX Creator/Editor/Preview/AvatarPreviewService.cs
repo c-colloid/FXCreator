@@ -91,6 +91,10 @@ namespace colloid.FXCreator.Preview
 		private bool _animationModeOwned;
 		private bool _disposed;
 		private bool _updateHooked;
+		/// <summary>見えているメッシュ全体の箱。画角の基準にする。</summary>
+		private Bounds _bodyBounds;
+		/// <summary>頭蓋底から頭頂までの実寸。姿勢で変わらないので一度だけ測る。</summary>
+		private float _headHeight;
 
 		/// <summary>プレビューを出せる状態か。アバターが人型でないなどの場合 false。</summary>
 		public bool IsUsable { get; private set; }
@@ -180,6 +184,7 @@ namespace colloid.FXCreator.Preview
 			light.type = LightType.Directional;
 			light.intensity = 1.1f;
 
+			MeasureBody();
 			WarmUp();
 		}
 
@@ -532,19 +537,17 @@ namespace colloid.FXCreator.Preview
 		}
 
 		/// <summary>
-		/// 指定のボーンが画面に収まる位置にカメラを置く。
-		/// アバターの正面（root の forward）側から見る。
+		/// 狙う点と収めたい半径を決めてカメラを置く。アバターの正面（root の forward）側から見る。
+		///
+		/// 寸法は<b>実測したボーン位置とレンダラの広がりから</b>出す。
+		/// メートル固定値にしていたときは、身長 0.8m のアバター（標準人型の半分）で
+		/// 全身指定が身長の2倍を映してしまい、半分が空白になっていた。
 		/// </summary>
 		private void PlaceCamera(PreviewFraming framing)
 		{
-			Transform bone = null;
-			if (_animator != null && _animator.isHuman)
-			{
-				bone = _animator.GetBoneTransform(framing.Focus);
-			}
-
-			Vector3 target = bone != null ? bone.position : _instance.transform.position + Vector3.up;
-			float radius = FramingRadius(framing.Focus);
+			Vector3 target;
+			float radius;
+			ResolveFraming(framing.Focus, out target, out radius);
 
 			float fov = Mathf.Clamp(framing.Fov, 5f, 120f);
 			_camera.fieldOfView = fov;
@@ -558,26 +561,182 @@ namespace colloid.FXCreator.Preview
 
 			_camera.transform.position = target + forward * distance;
 			_camera.transform.rotation = Quaternion.LookRotation(target - _camera.transform.position, Vector3.up);
+			_camera.nearClipPlane = Mathf.Max(0.001f, distance * 0.01f);
+			_camera.farClipPlane = distance * 10f + _bodyBounds.size.magnitude;
 		}
 
-		/// <summary>収めたい範囲の半径（m）。顔は寄りたいが全身は引きたい。</summary>
-		private static float FramingRadius(HumanBodyBones focus)
+		/// <summary>
+		/// 寄り先ごとの「狙う点」と「収めたい半径」。
+		/// <see cref="HumanBodyBones.Head"/> はボーン位置をそのまま狙わない。
+		/// Head ボーンは頭蓋底（首の付け根）にあるので、そこを画面中心にすると
+		/// 頭頂が切れて胸が入る。頭頂までの中点を狙う。
+		/// </summary>
+		private void ResolveFraming(HumanBodyBones focus, out Vector3 target, out float radius)
 		{
+			// 箱（_bodyBounds）はバインドポーズで測った値で、サンプリング後の姿勢とはズレる。
+			// 実測: クリップを当てるとアバター全体が 0.29m 沈み、箱を狙うと頭上に
+			// 大きな余白ができて足元が切れた。そこで<b>狙う点は必ず生きたボーン位置</b>から取り、
+			// 箱からは「頭の大きさ」「肩幅」といった姿勢で変わらない寸法だけを借りる。
+			Transform head = Bone(HumanBodyBones.Head);
+			Transform hips = Bone(HumanBodyBones.Hips);
+
+			if (head == null || hips == null)
+			{
+				target = _bodyBounds.center;
+				radius = Mathf.Max(_bodyBounds.extents.x, _bodyBounds.extents.y) * 1.08f;
+				return;
+			}
+
+			float headHeight = _headHeight > 0f ? _headHeight : _bodyBounds.size.y * 0.25f;
+			float top = head.position.y + headHeight;   // 頭のてっぺん（生きた位置から）
+			float bottom = FeetY(hips.position.y - headHeight);
+
 			switch (focus)
 			{
 				case HumanBodyBones.Head:
 				case HumanBodyBones.Neck:
-					return 0.16f;
+					// Head ボーンは頭蓋底にあるので、そのまま狙うと頭頂が切れて胸が入る。
+					target = new Vector3(head.position.x, head.position.y + headHeight * 0.5f, head.position.z);
+					radius = headHeight * 0.62f;
+					return;
+
 				case HumanBodyBones.LeftHand:
 				case HumanBodyBones.RightHand:
-					return 0.14f;
+				{
+					Transform hand = Bone(focus);
+					target = hand != null ? hand.position : head.position;
+					radius = Mathf.Max(0.01f, headHeight * 0.5f);
+					return;
+				}
+
 				case HumanBodyBones.Chest:
 				case HumanBodyBones.UpperChest:
 				case HumanBodyBones.Spine:
-					return 0.45f;
+				{
+					// 「腰から頭のてっぺんまで」。胴の長さ（腰→頭ボーン）を基準にすると、
+					// 頭が大きいデフォルメ体型で<b>顔寄りより狭くなる</b>逆転が起きる
+					// （実測: 胴 0.197m に対して頭 0.228m）。
+					float upper = Mathf.Max(0.01f, top - hips.position.y);
+					target = new Vector3(head.position.x, hips.position.y + upper * 0.5f, head.position.z);
+					radius = upper * 0.55f;
+					return;
+				}
+
 				default:
-					return 0.8f;
+				{
+					// 全身。足元から頭のてっぺんまでを収める。
+					float height = Mathf.Max(0.01f, top - bottom);
+					target = new Vector3(hips.position.x, bottom + height * 0.5f, hips.position.z);
+					radius = Mathf.Max(height * 0.5f, _bodyBounds.extents.x) * 1.06f;
+					return;
+				}
 			}
+		}
+
+		/// <summary>ローカル空間の箱を行列で移してワールドの AABB にする（8隅を通す）。</summary>
+		private static Bounds TransformBounds(Bounds local, Matrix4x4 matrix)
+		{
+			Vector3 c = local.center;
+			Vector3 e = local.extents;
+			var result = new Bounds(matrix.MultiplyPoint3x4(c + new Vector3(-e.x, -e.y, -e.z)), Vector3.zero);
+			result.Encapsulate(matrix.MultiplyPoint3x4(c + new Vector3(e.x, -e.y, -e.z)));
+			result.Encapsulate(matrix.MultiplyPoint3x4(c + new Vector3(-e.x, e.y, -e.z)));
+			result.Encapsulate(matrix.MultiplyPoint3x4(c + new Vector3(e.x, e.y, -e.z)));
+			result.Encapsulate(matrix.MultiplyPoint3x4(c + new Vector3(-e.x, -e.y, e.z)));
+			result.Encapsulate(matrix.MultiplyPoint3x4(c + new Vector3(e.x, -e.y, e.z)));
+			result.Encapsulate(matrix.MultiplyPoint3x4(c + new Vector3(-e.x, e.y, e.z)));
+			result.Encapsulate(matrix.MultiplyPoint3x4(c + new Vector3(e.x, e.y, e.z)));
+			return result;
+		}
+
+		private Transform Bone(HumanBodyBones bone)
+		{
+			return _animator != null && _animator.isHuman ? _animator.GetBoneTransform(bone) : null;
+		}
+
+		/// <summary>足元の高さ。足ボーンから取り、無ければ渡された値でしのぐ。</summary>
+		private float FeetY(float fallback)
+		{
+			float y = float.MaxValue;
+			foreach (HumanBodyBones b in new[]
+			{
+				HumanBodyBones.LeftToes, HumanBodyBones.RightToes,
+				HumanBodyBones.LeftFoot, HumanBodyBones.RightFoot
+			})
+			{
+				Transform bone = Bone(b);
+				if (bone != null)
+				{
+					y = Mathf.Min(y, bone.position.y);
+				}
+			}
+			// 足首・つま先のボーンは靴底より少し上にあるので、頭の大きさを目安に下へ伸ばす。
+			return y < float.MaxValue ? y - _headHeight * 0.15f : fallback;
+		}
+
+		/// <summary>
+		/// 見えているレンダラをすべて含む箱。バインドポーズで一度だけ測る。
+		/// 毎フレーム測り直すと、動きに合わせて画角が揺れて落ち着かない。
+		/// </summary>
+		private void MeasureBody()
+		{
+			Renderer[] renderers = _instance.GetComponentsInChildren<Renderer>(true);
+			bool any = false;
+			var bounds = new Bounds(_instance.transform.position, Vector3.zero);
+			Mesh baked = null;
+
+			for (int i = 0; i < renderers.Length; i++)
+			{
+				Renderer renderer = renderers[i];
+				if (!renderer.enabled || !renderer.gameObject.activeInHierarchy)
+				{
+					continue;
+				}
+
+				Bounds world;
+				var skin = renderer as SkinnedMeshRenderer;
+				if (skin != null && skin.sharedMesh != null)
+				{
+					// SkinnedMeshRenderer.bounds は<b>全メッシュで同じ</b>保守的な箱を返す
+					// （実測: 髪飾り1枚も体も top=0.732 で同じ）。変形を見越して膨らませた値なので、
+					// これで画角を決めると上に余白が出る。実際に焼いた頂点から測る。
+					if (baked == null)
+					{
+						baked = new Mesh { hideFlags = HideFlags.HideAndDontSave };
+					}
+					skin.BakeMesh(baked);
+					world = TransformBounds(baked.bounds, renderer.transform.localToWorldMatrix);
+				}
+				else
+				{
+					world = renderer.bounds;
+				}
+
+				if (!any)
+				{
+					bounds = world;
+					any = true;
+					continue;
+				}
+				bounds.Encapsulate(world);
+			}
+
+			if (baked != null)
+			{
+				UnityEngine.Object.DestroyImmediate(baked);
+			}
+
+			if (!any || bounds.size.y < 0.0001f)
+			{
+				// 何も見えない（全部オフなど）。破綻しない値を入れておく。
+				bounds = new Bounds(_instance.transform.position + Vector3.up * 0.8f, Vector3.one * 1.6f);
+			}
+			_bodyBounds = bounds;
+
+			Transform headBone = Bone(HumanBodyBones.Head);
+			_headHeight = headBone != null
+				? Mathf.Max(0.01f, bounds.max.y - headBone.position.y)
+				: bounds.size.y * 0.25f;
 		}
 
 		private void StartAnimationMode()
