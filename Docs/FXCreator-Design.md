@@ -90,7 +90,7 @@ Assets/FX Creator/Editor/
 │   ├─ View/
 │   │   ├─ FxcAnimatorWindow.cs  EditorWindow
 │   │   ├─ LayerListView.cs      レイヤー一覧
-│   │   ├─ ParameterListView.cs  資料の左サイドバー「VAR」
+│   │   ├─ ParameterListView.cs  資料の「VAR」（Overlay に載せる）
 │   │   ├─ StateNodeView.cs      Motion / Speed / WriteDefaults / プレビュー
 │   │   ├─ ToggleNodeView.cs     bool 分岐ノード
 │   │   ├─ SwitchNodeView.cs     int 分岐ノード（0/1/2...）
@@ -100,8 +100,8 @@ Assets/FX Creator/Editor/
 │   │   ├─ AcChangeWatcher.cs    外部変更・Undo検知 → 再構築
 │   │   └─ FxcLayoutAsset.cs     サイドカー（§4.4）
 │   └─ Vrc/
-│       ├─ VrcParameterPanel.cs  資料の下パネル「parameter (name, sync)」
-│       └─ VrcMenuPanel.cs       資料の下パネル「menu (name, value)」
+│       ├─ VrcParameterPanel.cs  資料の「parameter (name, sync)」
+│       └─ VrcMenuPanel.cs       資料の「menu (name, value)」
 │
 ├─ Targeting/                ★D1: 両対応の抽象
 │   ├─ IFxTarget.cs
@@ -517,9 +517,29 @@ public struct PreviewRequest
 
 ---
 
-## 6. サイドバー / 下パネル（資料 画像1）
+## 6. VAR / parameter / menu パネル（資料 画像1）
 
-### 6.1 左サイドバー「VAR」
+> **配置の変更（2026-09-14）**: 当初この章は「左サイドバー」「下パネル」と書いていたが、
+> 元の構想は<b>フローティング</b>だった。3枚をドッキングで常設すると
+> グラフが<b>ウィンドウの 29%</b>（実測）しか残らず、主役が3割を切る。
+> VAR / parameter / menu はいずれも常時見るものではなく編集時に開くものなので、
+> **Unity の Overlay システム**（`UnityEditor.Overlays.Overlay` /
+> `ISupportsOverlays`。2022.3 で public）に載せた。
+> フローティングと端へのドッキングの切り替え、折り畳み、表示の on/off、
+> 位置の保存が標準で付くため、自前で持つのは中身だけで済む。
+> 変更後はグラフが **47%** になった。
+>
+> 常設のまま残したのは、常に要るレイヤー一覧と、選択に追従する `ElementInspector` だけ。
+> `VarOverlay` は既定で表示、`parameter` と `menu` は既定で非表示
+> （必要なときに `` ` `` キーかキャンバスの右クリックで出す。ステータス行に案内を出している）。
+>
+> 実装上の注意: `Overlay.supportedLayouts` は `protected internal` なので、
+> 別アセンブリから override するときは `protected` にする（`protected internal` だと CS0507）。
+> パネル本体（`ParameterListView` 等）は `VisualElement` として自己完結させてあるので、
+> `CreatePanelContent()` から返すだけで載せ替えられた。中身の作り直しは不要。
+> 見出しは Overlay 側が出すので、パネル内の見出しは外すこと（同じ文字が2行並ぶ）。
+
+### 6.1 「VAR」パネル
 
 `AnimatorController.parameters` の一覧。
 - 追加（Float / Int / Bool / Trigger）、削除、リネーム、デフォルト値編集
@@ -528,7 +548,7 @@ public struct PreviewRequest
 - 参照されていないパラメータに警告アイコン
 - レイヤー一覧もここに置く（資料の ①②③④ のリスト）
 
-### 6.2 下パネル「parameter (name, sync)」
+### 6.2 「parameter (name, sync)」パネル
 
 `VRCExpressionParameters` の編集。
 - Controller のパラメータとの差分表示（Controller にあるが同期設定されていない／逆）
@@ -536,7 +556,7 @@ public struct PreviewRequest
 - コスト表示は `VRCExpressionParameters.MAX_PARAMETER_COST` を参照して計算（SDK更新で上限が変わるためハードコードしない）
 - 既存の `jp.colloid.vrc-expression-params-extension` と表示ロジックを共有できるか調査（重複実装を避ける）
 
-### 6.3 下パネル「menu (name, value)」
+### 6.3 「menu (name, value)」パネル
 
 `VRCExpressionsMenu` の編集（v0.1 は簡易版）。
 - コントロール一覧（name / type / parameter / value）
@@ -707,7 +727,7 @@ R1 の対策どおりテストファーストで実施。`AcEdit` と `AcEditTes
 | `ElementInspector` は再構築と値同期を分けた | 対象が変わったときだけ作り直し、Undo や外部変更では `SyncValues()` で値だけ差し替える | 作り直すと入力中のフィールドからフォーカスが飛ぶ |
 | 条件の行はパラメータ型で選択肢を絞る | Bool に `Greater` を出さない。パラメータが消えて宙に浮いた条件は「(見つかりません)」付きで名前を残す | 黙って別のパラメータに化けると気づけない |
 
-**§11-5 の宿題（ウィンドウ分割）**: `TwoPaneSplitView` の入れ子で足りることを実機で確認した。
+**§11-5 の宿題（ウィンドウ分割）**: `TwoPaneSplitView` の入れ子で足りることを実機で確認した（後日、VAR / parameter / menu は Overlay へ移した。§6 冒頭）。
 外側 `[レイヤー一覧 | 右]`、内側 `[グラフ列 | ElementInspector]`（右を固定幅）。
 
 **ゲート確認（2026-09-14）**:
@@ -1009,4 +1029,4 @@ EditMode テスト 96/96（`ParameterRenameTests` 11 本を追加）。
 2. **BlendTree ノード**: v0.1 は「BlendTree を持つ State」として1ノードで表示し、中身は標準インスペクタへ委譲
 3. **`StateMachineBehaviour`**: 表示のみ（R4 の原則）
 4. **ノードの折り畳み（資料の close/open button）**: Phase 2 で入れるか Phase 4 に回すか
-5. **ウィンドウ分割**: 資料はグラフ + 左サイドバー + 下パネルの3分割。`TwoPaneSplitView` の入れ子で足りるか要検証
+5. **ウィンドウ分割**: 解決済み。VAR / parameter / menu は Unity Overlay（フローティング）、レイヤー一覧と ElementInspector は `TwoPaneSplitView` の入れ子。§6 冒頭を参照

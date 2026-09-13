@@ -29,19 +29,22 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			style.flexGrow = 1;
 			style.minHeight = 90f;
 
+			// 見出しは置かない。Overlay 側が「VAR」と表示するので、
+			// ここにも書くと同じ文字が2行並ぶ。
 			var header = new VisualElement
 			{
-				style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, flexShrink = 0 }
+				style =
+				{
+					flexDirection = FlexDirection.Row,
+					alignItems = Align.Center,
+					justifyContent = Justify.FlexEnd,
+					flexShrink = 0
+				}
 			};
-			var title = new Label("VAR");
-			title.style.unityFontStyleAndWeight = FontStyle.Bold;
-			title.style.paddingLeft = 6f;
-			title.style.paddingTop = 4f;
-			title.style.flexGrow = 1;
-			header.Add(title);
 
 			_add = new Button(ShowAddMenu) { text = "+" };
 			_add.style.width = 22f;
+			_add.tooltip = "パラメータを追加";
 			header.Add(_add);
 			Add(header);
 

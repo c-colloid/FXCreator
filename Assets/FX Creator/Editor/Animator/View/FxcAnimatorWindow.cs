@@ -24,16 +24,16 @@ namespace colloid.FXCreator.AnimatorGraph.View
 	/// （<c>IFxTarget</c>）は Phase 7 で差し込むので、その時にこの
 	/// <see cref="ResolveFromAvatar"/> が <c>FxTargetResolver</c> へ移る。
 	/// </summary>
-	public class FxcAnimatorWindow : EditorWindow
+	public class FxcAnimatorWindow : EditorWindow, UnityEditor.Overlays.ISupportsOverlays
 	{
 		private AcGraphSource _source;
 		private AcChangeWatcher _watcher;
 
 		private FXCGraphView _graph;
 		private LayerListView _layers;
-		private ParameterListView _parameters;
-		private Vrc.VrcParameterPanel _vrcParameters;
-		private Vrc.VrcMenuPanel _vrcMenu;
+
+
+
 		private ElementInspector _inspector;
 		private VisualElement _breadcrumb;
 		private Label _status;
@@ -66,37 +66,23 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			VisualElement root = rootVisualElement;
 			root.Add(BuildToolbar());
 
-			var split = new TwoPaneSplitView(0, 250f, TwoPaneSplitViewOrientation.Horizontal);
+			// VAR / parameter / menu は Overlay（フローティング）へ移した（§6）。
+			// 常設していたときはグラフがウィンドウの 29% しか残らなかった。
+			// ここに残すのは、常に要るレイヤー一覧と選択中の詳細だけ。
+			var split = new TwoPaneSplitView(0, 190f, TwoPaneSplitViewOrientation.Horizontal);
 			split.style.flexGrow = 1;
 			root.Add(split);
 
-			// 資料の左サイドバーはレイヤー一覧と VAR の2段（§6.1）。
-			var sidebar = new TwoPaneSplitView(0, 200f, TwoPaneSplitViewOrientation.Vertical);
-			sidebar.style.flexGrow = 1;
-			split.Add(sidebar);
-
 			_layers = new LayerListView();
 			_layers.LayerSelected += OnLayerSelected;
-			sidebar.Add(_layers);
+			split.Add(_layers);
 
-			_parameters = new ParameterListView();
-			sidebar.Add(_parameters);
-
-			// グラフ列と詳細パネルをもう一段の分割で並べる（§11-5 の入れ子検証）。
-			// 固定するのは右側（index 1）で、グラフ側が伸び縮みする。
 			var rightSplit = new TwoPaneSplitView(1, 260f, TwoPaneSplitViewOrientation.Horizontal);
 			rightSplit.style.flexGrow = 1;
 			split.Add(rightSplit);
 
-			// 資料の下パネル（parameter / menu）をグラフの下に置く（§6.2 / §6.3）。
-			var center = new TwoPaneSplitView(1, 150f, TwoPaneSplitViewOrientation.Vertical);
-			center.style.flexGrow = 1;
-			rightSplit.Add(center);
-
 			var right = new VisualElement { style = { flexGrow = 1 } };
-			center.Add(right);
-
-			center.Add(BuildVrcPanels());
+			rightSplit.Add(right);
 
 			_inspector = new ElementInspector();
 			// 畳み込みの解除はサイドカーを触るのでソース側に任せる。
@@ -366,45 +352,51 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_framePending = true;
 		}
 
-		/// <summary>下パネル。parameter / menu をタブで切り替える（§6.2 / §6.3）。</summary>
-		private VisualElement BuildVrcPanels()
+		#region Floating panels (Overlay)
+
+		/// <summary>
+		/// 出ているフローティングパネル（§6）。Overlay は Unity が生成・破棄するので、
+		/// ウィンドウ側は「いま出ているもの」だけを持ち、表示対象が変わったら配る。
+		/// </summary>
+		private readonly List<IFxcPanel> _panels = new List<IFxcPanel>();
+
+		internal void RegisterPanel(IFxcPanel panel)
 		{
-			var host = new VisualElement { style = { flexGrow = 1 } };
-
-			var tabs = new VisualElement
+			if (panel == null || _panels.Contains(panel))
 			{
-				style = { flexDirection = FlexDirection.Row, flexShrink = 0 }
-			};
-			host.Add(tabs);
-
-			_vrcParameters = new Vrc.VrcParameterPanel();
-			_vrcMenu = new Vrc.VrcMenuPanel();
-			host.Add(_vrcParameters);
-			host.Add(_vrcMenu);
-
-			var parameterTab = new Button { text = "parameter" };
-			var menuTab = new Button { text = "menu" };
-			Action<bool> select = showParameters =>
-			{
-				_vrcParameters.style.display = showParameters ? DisplayStyle.Flex : DisplayStyle.None;
-				_vrcMenu.style.display = showParameters ? DisplayStyle.None : DisplayStyle.Flex;
-				parameterTab.style.unityFontStyleAndWeight = showParameters ? FontStyle.Bold : FontStyle.Normal;
-				menuTab.style.unityFontStyleAndWeight = showParameters ? FontStyle.Normal : FontStyle.Bold;
-			};
-			parameterTab.clicked += () => select(true);
-			menuTab.clicked += () => select(false);
-			tabs.Add(parameterTab);
-			tabs.Add(menuTab);
-			select(true);
-
-			return host;
+				return;
+			}
+			_panels.Add(panel);
+			PushTargetTo(panel);
 		}
+
+		internal void UnregisterPanel(IFxcPanel panel)
+		{
+			_panels.Remove(panel);
+		}
+
+		private void PushTargetTo(IFxcPanel panel)
+		{
+			// パネルはウィンドウより先に作られることがある（レイアウト復元時）。
+			// その場合 _source がまだ無いので、編集可否は「不可」に倒しておく。
+			bool readOnly = _source == null || !_source.CanEdit;
+			panel.ApplyTarget(_controller, readOnly, _avatar);
+		}
+
+		private void PushTargetToPanels()
+		{
+			for (int i = 0; i < _panels.Count; i++)
+			{
+				PushTargetTo(_panels[i]);
+			}
+		}
+
+		#endregion
 
 		private void UpdateChrome()
 		{
 			_layers.SetController(_controller, _source.LayerIndex);
-			_parameters.SetController(_controller, !_source.CanEdit);
-			UpdateVrcPanels();
+			PushTargetToPanels();
 			RebuildBreadcrumb();
 			UpdateStatus();
 
@@ -426,24 +418,6 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			// 対象は変えずに値だけ取り直す。作り直すと入力中のフィールドから
 			// フォーカスが飛ぶので、Undo や外部変更のあとでもここは値同期に留める。
 			_inspector.SyncValues();
-		}
-
-		/// <summary>
-		/// 下パネルへアバターの Expression 資産を流す。
-		/// Phase 7 で <c>IFxTarget</c> が入ったら、その解決結果に置き換える。
-		/// </summary>
-		private void UpdateVrcPanels()
-		{
-#if VRC
-			VRCAvatarDescriptor descriptor = _avatar != null
-				? _avatar.GetComponent<VRCAvatarDescriptor>()
-				: null;
-			_vrcParameters.SetTarget(_controller, descriptor != null ? descriptor.expressionParameters : null);
-			_vrcMenu.SetMenu(descriptor != null ? descriptor.expressionsMenu : null);
-#else
-			_vrcParameters.SetTarget(_controller, null);
-			_vrcMenu.SetMenu(null);
-#endif
 		}
 
 		private void RebuildBreadcrumb()
@@ -501,8 +475,10 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				return;
 			}
 
+			// parameter / menu は既定で隠れている。出し方が分からないと存在に気づけないので、
+			// Unity 標準のオーバーレイメニューの開き方をここに書いておく。
 			string mode = _source.CanEdit
-				? "右クリックで追加 · ポートからドラッグで遷移 · Delete で削除"
+				? "右クリックで追加 · ポートからドラッグで遷移 · Delete で削除 · ` でパネル"
 				: (_source.ReadOnlyReason ?? "読み取り専用");
 
 			_status.text = string.Format(
