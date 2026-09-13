@@ -27,6 +27,13 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		private AnimatorController _controller;
 		private AnimatorState _state;
 		private AnimatorTransitionBase _transition;
+		private AcTransitionGroup _group;
+
+		/// <summary>畳み込みノードの Expand を押されたときに呼ぶ（サイドカーを触るのはソース側）。</summary>
+		public System.Action<AnimatorState, string, bool> SetGroupExpanded;
+
+		/// <summary>いま畳み込みノードを出しているか。グループが消えたときの片付け判定に使う。</summary>
+		public bool IsShowingGroup => _group != null;
 
 		/// <summary>値を流し込んでいる最中か。UI 起点の変更と区別してループを防ぐ。</summary>
 		private bool _syncing;
@@ -66,12 +73,33 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		{
 			// 破棄済みの対象を持っている場合も作り直したいので、Unity の null 比較ではなく
 			// 参照そのもので「何か持っているか」を見る。
-			if (ReferenceEquals(_state, null) && ReferenceEquals(_transition, null))
+			if (ReferenceEquals(_state, null) && ReferenceEquals(_transition, null) && _group == null)
 			{
 				return;
 			}
 			_state = null;
 			_transition = null;
+			_group = null;
+			Rebuild();
+		}
+
+		/// <summary>
+		/// 畳み込みノード（§4.2）。グループは毎回作り直されるオブジェクトなので、
+		/// 同じ内容でも参照は変わる。ID で同一性を見る。
+		/// </summary>
+		public void ShowGroup(AnimatorController controller, AcTransitionGroup group)
+		{
+			if (_controller == controller && _group != null && group != null && _group.Id == group.Id)
+			{
+				// 中身（分岐の数など）は変わりうるので、参照だけ差し替えて作り直す。
+				_group = group;
+				Rebuild();
+				return;
+			}
+			_controller = controller;
+			_state = null;
+			_transition = null;
+			_group = group;
 			Rebuild();
 		}
 
@@ -148,11 +176,18 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_valueSyncs.Clear();
 			_syncConditions = null;
 
-			bool has = _state != null || _transition != null;
+			bool has = _state != null || _transition != null || _group != null;
 			_empty.style.display = has ? DisplayStyle.None : DisplayStyle.Flex;
 			if (!has)
 			{
 				_title.text = "Inspector";
+				return;
+			}
+
+			if (_group != null)
+			{
+				_title.text = _group.Kind == AcGroupKind.Toggle ? "Toggle" : "Switch";
+				BuildGroupFields(_group);
 				return;
 			}
 
@@ -238,6 +273,108 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				_body.Add(PassthroughNote("BlendTree の中身は標準インスペクタで編集してください"));
 			}
+		}
+
+		/// <summary>
+		/// 畳み込みノードの中身。実体は遷移群なので、ここでの編集は
+		/// 「配下の遷移の conditions[0] を一斉に書き換える」に落ちる（§4.2 の逆方向）。
+		/// </summary>
+		private void BuildGroupFields(AcTransitionGroup group)
+		{
+			_body.Add(PassthroughNote(
+				group.Branches.Count + " 本の遷移をまとめています（" + group.Source.name + " から）"));
+
+			// パラメータの付け替え。型が合わないものを選ぶと畳み込みが崩れるので、
+			// toggle には bool、switch には int だけを出す。
+			var names = new List<string>();
+			AnimatorControllerParameter[] parameters =
+				_controller != null ? _controller.parameters : new AnimatorControllerParameter[0];
+			AnimatorControllerParameterType wanted = group.Kind == AcGroupKind.Toggle
+				? AnimatorControllerParameterType.Bool
+				: AnimatorControllerParameterType.Int;
+			for (int i = 0; i < parameters.Length; i++)
+			{
+				if (parameters[i].type == wanted)
+				{
+					names.Add(parameters[i].name);
+				}
+			}
+			if (!names.Contains(group.Parameter))
+			{
+				names.Insert(0, group.Parameter);
+			}
+
+			var parameter = new DropdownField("Parameter") { choices = names, value = group.Parameter };
+			parameter.RegisterValueChangedCallback(evt =>
+			{
+				if (_syncing || !Editable || evt.newValue == group.Parameter)
+				{
+					return;
+				}
+				using (AcEdit e = AcEdit.Begin(_controller, "Set Group Parameter"))
+				{
+					// 配下を一斉に書き換えないと、グループが2つに割れてしまう。
+					for (int i = 0; i < group.Branches.Count; i++)
+					{
+						AnimatorTransitionBase t = group.Branches[i].Transition;
+						AnimatorCondition[] conditions = t.conditions;
+						if (conditions.Length != 1)
+						{
+							continue;
+						}
+						conditions[0].parameter = evt.newValue;
+						e.SetConditions(t, conditions);
+					}
+				}
+			});
+			_body.Add(parameter);
+
+			var header = new Label("Branches");
+			header.style.unityFontStyleAndWeight = FontStyle.Bold;
+			header.style.marginTop = 6f;
+			_body.Add(header);
+
+			for (int i = 0; i < group.Branches.Count; i++)
+			{
+				AcGroupBranch branch = group.Branches[i];
+				AnimatorTransitionBase transition = branch.Transition;
+
+				var row = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 2f } };
+
+				var label = new Label(branch.Label + "  →  " + DescribeEndpoints(transition).Substring(2));
+				label.style.flexGrow = 1;
+				label.style.overflow = Overflow.Hidden;
+				row.Add(label);
+
+				var remove = new Button(() =>
+				{
+					using (AcEdit e = AcEdit.Begin(_controller, "Delete Branch"))
+					{
+						e.RemoveTransition(transition);
+					}
+				})
+				{
+					text = "-"
+				};
+				remove.style.width = 20f;
+				row.Add(remove);
+
+				_body.Add(row);
+			}
+
+			var expand = new Button(() =>
+			{
+				if (SetGroupExpanded != null)
+				{
+					SetGroupExpanded(group.Source, group.Parameter, true);
+				}
+			})
+			{
+				text = "Expand (畳み込みを解除)"
+			};
+			expand.style.marginTop = 6f;
+			_body.Add(expand);
+			_body.Add(PassthroughNote("解除しても Controller は変わりません（表示だけ）"));
 		}
 
 		private void BuildTransitionFields(AnimatorTransitionBase transition)

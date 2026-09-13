@@ -78,6 +78,9 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			rightSplit.Add(right);
 
 			_inspector = new ElementInspector();
+			// 畳み込みの解除はサイドカーを触るのでソース側に任せる。
+			_inspector.SetGroupExpanded = (state, parameter, expanded) =>
+				_source.SetGroupExpanded(state, parameter, expanded);
 			rightSplit.Add(_inspector);
 
 			_breadcrumb = new VisualElement
@@ -331,6 +334,22 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_layers.SetController(_controller, _source.LayerIndex);
 			RebuildBreadcrumb();
 			UpdateStatus();
+
+			// 畳み込みノードは再構築のたびに別オブジェクトになるので、選択が残っていれば
+			// 取り直す（分岐の増減がそのまま見えるように）。
+			AcTransitionGroup group = ResolveSelectedGroup();
+			if (group != null)
+			{
+				_inspector.ShowGroup(_controller, group);
+				return;
+			}
+			if (_inspector.IsShowingGroup)
+			{
+				// グループが消えた（Expand した、分岐を全部消した）。
+				_inspector.ShowNothing();
+				return;
+			}
+
 			// 対象は変えずに値だけ取り直す。作り直すと入力中のフィールドから
 			// フォーカスが飛ぶので、Undo や外部変更のあとでもここは値同期に留める。
 			_inspector.SyncValues();
@@ -423,9 +442,16 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				return null;
 			}
-			return ac.Ref.Kind == AcNodeKind.State || ac.Ref.Kind == AcNodeKind.StateMachine
-				? (FXCNodeView)new StateNodeView(owner)
-				: new SpecialNodeView(owner);
+			switch (ac.Ref.Kind)
+			{
+				case AcNodeKind.State:
+				case AcNodeKind.StateMachine:
+					return new StateNodeView(owner);
+				case AcNodeKind.Group:
+					return new GroupNodeView(owner);
+				default:
+					return new SpecialNodeView(owner);
+			}
 		}
 
 		/// <summary>ダブルクリック: サブステートマシンへ潜る / (Up) で戻る。</summary>
@@ -460,6 +486,14 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		/// </summary>
 		private void OnGraphSelectionChanged()
 		{
+			// 畳み込みノードは Unity 側に実体が無いので、先に見る。
+			AcTransitionGroup group = ResolveSelectedGroup();
+			if (group != null)
+			{
+				_inspector.ShowGroup(_controller, group);
+				return;
+			}
+
 			Object target = ResolveSelectedObject();
 
 			var state = target as AnimatorState;
@@ -481,6 +515,23 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				Selection.activeObject = target;
 			}
+		}
+
+		private AcTransitionGroup ResolveSelectedGroup()
+		{
+			if (_source == null || _graph.Selection.Nodes.Count != 1 || _graph.Selection.Edges.Count != 0)
+			{
+				return null;
+			}
+			foreach (string nodeId in _graph.Selection.Nodes)
+			{
+				AcGraphNode node;
+				if (_source.TryGetNode(nodeId, out node) && node.Ref.Kind == AcNodeKind.Group)
+				{
+					return node.Group;
+				}
+			}
+			return null;
 		}
 
 		private Object ResolveSelectedObject()

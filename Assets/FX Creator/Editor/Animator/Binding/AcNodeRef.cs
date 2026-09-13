@@ -23,7 +23,16 @@ namespace colloid.FXCreator.AnimatorGraph
 		Exit,
 
 		/// <summary>親ステートマシンへ戻る「(Up)」ノード。</summary>
-		Parent
+		Parent,
+
+		/// <summary>
+		/// toggle / switch の畳み込みノード（§4.2）。Unity 側に実体が無く、
+		/// 遷移群の表現でしかないので <see cref="AcNodeRef.Target"/> には
+		/// 分岐元の <see cref="AnimatorState"/> を入れる。
+		/// ID はパラメータ名まで含めないと同じ State の複数グループが衝突するため、
+		/// <see cref="AcNodeRef.MakeId"/> ではなく <c>AcTransitionGroup.Id</c> を使う。
+		/// </summary>
+		Group
 	}
 
 	/// <summary>
@@ -84,6 +93,7 @@ namespace colloid.FXCreator.AnimatorGraph
 				case AcNodeKind.Entry: return "entry:";
 				case AcNodeKind.Exit: return "exit:";
 				case AcNodeKind.Parent: return "up:";
+				case AcNodeKind.Group: return "g:";
 				default: return "?:";
 			}
 		}

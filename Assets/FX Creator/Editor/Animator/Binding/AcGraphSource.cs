@@ -70,6 +70,12 @@ namespace colloid.FXCreator.AnimatorGraph
 
 		/// <summary>このステートマシンの既定ステートか。</summary>
 		public bool IsDefault { get; set; }
+
+		/// <summary>
+		/// <see cref="AcNodeKind.Group"/> のときだけ入る、畳み込まれた遷移群（§4.2）。
+		/// ビューと編集操作はここから分岐の一覧とポートを引く。
+		/// </summary>
+		public AcTransitionGroup Group { get; set; }
 	}
 
 	public sealed class AcGraphEdge : IFXCGraphEdge
@@ -124,6 +130,7 @@ namespace colloid.FXCreator.AnimatorGraph
 		private static readonly Color TransitionEdge = new Color(0.62f, 0.64f, 0.72f, 1f);
 		private static readonly Color AnyEdge = new Color(0.45f, 0.68f, 0.78f, 1f);
 		private static readonly Color DefaultEdge = new Color(0.55f, 0.78f, 0.55f, 1f);
+		private static readonly Color GroupEdge = new Color(0.58f, 0.52f, 0.72f, 1f);
 		private static readonly Color MutedEdge = new Color(0.50f, 0.34f, 0.34f, 0.55f);
 		private static readonly Color SoloEdge = new Color(0.90f, 0.78f, 0.30f, 1f);
 
@@ -145,6 +152,13 @@ namespace colloid.FXCreator.AnimatorGraph
 
 		/// <summary>レイヤールートから表示中ステートマシンまでのパンくず。[0] が必ずレイヤールート。</summary>
 		private readonly List<AnimatorStateMachine> _path = new List<AnimatorStateMachine>();
+
+		/// <summary>表示中ステートマシンの State ごとの畳み込み結果（§4.2）。</summary>
+		private readonly Dictionary<AnimatorState, AcGroupingResult> _grouping =
+			new Dictionary<AnimatorState, AcGroupingResult>();
+
+		/// <summary>サイドカー（§4.4）。無くても既定の見た目で動く。</summary>
+		private FxcLayout _layout;
 
 		private string _entryNodeId;
 		private string _exitNodeId;
@@ -205,6 +219,7 @@ namespace colloid.FXCreator.AnimatorGraph
 			Controller = controller;
 			LayerIndex = 0;
 			_path.Clear();
+			_layout = new FxcLayout(controller);
 			EvaluateWritability();
 			Refresh();
 		}
@@ -302,13 +317,21 @@ namespace colloid.FXCreator.AnimatorGraph
 			_nodeById.Clear();
 			_transitionByEdgeId.Clear();
 			_representativeNodeId.Clear();
+			_grouping.Clear();
 			_entryNodeId = _exitNodeId = _anyNodeId = _parentNodeId = null;
+
+			if (_layout != null)
+			{
+				_layout.Invalidate();
+			}
 
 			ValidatePath();
 
 			AnimatorStateMachine sm = Current;
 			if (sm != null)
 			{
+				// 畳み込みはノードにもエッジにも要るので、先に1回だけ計算する。
+				ComputeGrouping(sm);
 				BuildNodes(sm);
 				BuildEdges(sm);
 			}
@@ -379,6 +402,174 @@ namespace colloid.FXCreator.AnimatorGraph
 
 		#endregion
 
+		#region Grouping (toggle / switch)
+
+		/// <summary>畳み込みノードの大きさ。ポート1つにつき縦に伸ばす。</summary>
+		public static readonly Vector2 GroupSize = new Vector2(120f, 34f);
+
+		private const float GroupPortPitch = 16f;
+
+		private static readonly Color ToggleAccent = new Color(0.55f, 0.45f, 0.72f);
+		private static readonly Color SwitchAccent = new Color(0.42f, 0.60f, 0.50f);
+
+		private void ComputeGrouping(AnimatorStateMachine sm)
+		{
+			ChildAnimatorState[] states = sm.states;
+			for (int i = 0; i < states.Length; i++)
+			{
+				AnimatorState state = states[i].state;
+				if (state == null)
+				{
+					continue;
+				}
+				_grouping[state] = AcTransitionGrouping.Collapse(state, IsExpanded);
+			}
+		}
+
+		/// <summary>サイドカーが「展開しろ」と言っている (State, パラメータ) か。</summary>
+		private bool IsExpanded(AnimatorState state, string parameter)
+		{
+			return _layout != null && _layout.IsExpanded(state, parameter);
+		}
+
+		public bool IsGroupExpanded(AnimatorState state, string parameter)
+		{
+			return IsExpanded(state, parameter);
+		}
+
+		/// <summary>畳み込みを解除する / 戻す。Controller は一切変えない（§4.2）。</summary>
+		public void SetGroupExpanded(AnimatorState state, string parameter, bool expanded)
+		{
+			if (_layout == null)
+			{
+				return;
+			}
+			_layout.SetExpanded(state, parameter, expanded);
+			Refresh();
+		}
+
+		private Vector2 GroupSizeFor(AcTransitionGroup group)
+		{
+			int ports = group.PortIds.Count + (group.Kind == AcGroupKind.Switch ? 1 : 0);
+			return new Vector2(GroupSize.x, Mathf.Max(GroupSize.y, 18f + ports * GroupPortPitch));
+		}
+
+		/// <summary>
+		/// 保存された位置が無いときの既定位置。分岐元と行き先の中間に置くと、
+		/// 既存の Controller をそのまま開いても線が素直に見える。
+		/// </summary>
+		private Vector2 DefaultGroupPosition(AcTransitionGroup group, Rect sourceRect)
+		{
+			var sum = Vector2.zero;
+			int count = 0;
+			for (int i = 0; i < group.Branches.Count; i++)
+			{
+				string destination = ResolveDestination(group.Branches[i].Transition);
+				AcGraphNode node;
+				if (destination != null && _nodeById.TryGetValue(destination, out node))
+				{
+					sum += node.GraphRect.position;
+					count++;
+				}
+			}
+
+			if (count == 0)
+			{
+				return new Vector2(sourceRect.xMax + 60f, sourceRect.y);
+			}
+
+			Vector2 mean = sum / count;
+			return Vector2.Lerp(sourceRect.position, mean, 0.5f) + new Vector2(StateSize.x * 0.5f, 0f);
+		}
+
+		/// <summary>
+		/// 畳み込みノードを足す。State ノードがすべて出来たあとに呼ぶ
+		/// （既定位置の計算で行き先ノードの座標を使うため）。
+		/// </summary>
+		private void BuildGroupNodes(AnimatorStateMachine sm)
+		{
+			ChildAnimatorState[] states = sm.states;
+			for (int i = 0; i < states.Length; i++)
+			{
+				AnimatorState state = states[i].state;
+				AcGroupingResult grouping;
+				if (state == null || !_grouping.TryGetValue(state, out grouping))
+				{
+					continue;
+				}
+
+				Rect sourceRect = new Rect(states[i].position.x, states[i].position.y, StateSize.x, StateSize.y);
+				for (int g = 0; g < grouping.Groups.Count; g++)
+				{
+					AcTransitionGroup group = grouping.Groups[g];
+
+					Vector2 position;
+					if (_layout == null || !_layout.TryGetPosition(state, group.Parameter, out position))
+					{
+						position = DefaultGroupPosition(group, sourceRect);
+					}
+
+					var node = new AcGraphNode
+					{
+						Id = group.Id,
+						Ref = new AcNodeRef(AcNodeKind.Group, state),
+						Group = group,
+						Title = group.Parameter,
+						Subtitle = group.Kind == AcGroupKind.Toggle ? "toggle" : "switch",
+						AccentColor = group.Kind == AcGroupKind.Toggle ? ToggleAccent : SwitchAccent,
+						Ports = BuildGroupPorts(group),
+						GraphRect = new Rect(position, GroupSizeFor(group))
+					};
+					AddNode(node);
+				}
+			}
+		}
+
+		/// <summary>
+		/// 入力1つ＋分岐ごとの出力。switch には「値を増やす」ための空きポートを足す
+		/// （ポートは遷移から導出されるので、遷移を作らずにポートだけ増やすことはできない）。
+		/// </summary>
+		private static IReadOnlyList<IFXCGraphPort> BuildGroupPorts(AcTransitionGroup group)
+		{
+			var ports = new List<IFXCGraphPort>();
+			ports.Add(new AcGraphPort
+			{
+				Id = AcGraphPort.InId,
+				Name = "In",
+				Direction = FXCPortDirection.Input,
+				Color = new Color(0.40f, 0.58f, 0.85f)
+			});
+
+			for (int i = 0; i < group.PortIds.Count; i++)
+			{
+				ports.Add(new AcGraphPort
+				{
+					Id = group.PortIds[i],
+					Name = group.PortLabels[i],
+					Direction = FXCPortDirection.Output,
+					Color = new Color(0.85f, 0.55f, 0.40f)
+				});
+			}
+
+			if (group.Kind == AcGroupKind.Switch)
+			{
+				ports.Add(new AcGraphPort
+				{
+					Id = NewBranchPort,
+					Name = "新しい値",
+					Direction = FXCPortDirection.Output,
+					Color = new Color(0.55f, 0.55f, 0.58f)
+				});
+			}
+
+			return ports;
+		}
+
+		/// <summary>switch の「ここへ繋ぐと新しい値の分岐ができる」ポート。</summary>
+		public const string NewBranchPort = "new";
+
+		#endregion
+
 		#region Nodes
 
 		private void BuildNodes(AnimatorStateMachine sm)
@@ -445,6 +636,9 @@ namespace colloid.FXCreator.AnimatorGraph
 				// 配下の要素は、すべてこのサブステートマシンのノードが代表する。
 				MapSubtree(child, node.Id);
 			}
+
+			// 行き先ノードの座標が要るので、State と SubSM を全部置いてから。
+			BuildGroupNodes(sm);
 		}
 
 		private string AddSpecial(AcNodeKind kind, AnimatorStateMachine owner, string title, Vector3 position, Color fill)
@@ -555,10 +749,37 @@ namespace colloid.FXCreator.AnimatorGraph
 					continue;
 				}
 				string from = AcNodeRef.MakeId(AcNodeKind.State, state);
-				AnimatorStateTransition[] transitions = state.transitions;
-				for (int t = 0; t < transitions.Length; t++)
+
+				AcGroupingResult grouping;
+				if (!_grouping.TryGetValue(state, out grouping))
 				{
-					AddTransitionEdge(from, transitions[t], TransitionEdge);
+					continue;
+				}
+
+				// 畳み込まれた遷移は「State → グループ」＋「グループのポート → 行き先」の
+				// 2段で描く。エッジIDは遷移のものを使うので、選択すればその遷移が出る。
+				for (int g = 0; g < grouping.Groups.Count; g++)
+				{
+					AcTransitionGroup group = grouping.Groups[g];
+					AddEdge("gin:" + group.Id, from, group.Id, GroupEdge, null, null, AcGraphPort.InId);
+
+					for (int b = 0; b < group.Branches.Count; b++)
+					{
+						AcGroupBranch branch = group.Branches[b];
+						string destination = ResolveDestination(branch.Transition);
+						if (destination == null)
+						{
+							continue;
+						}
+						string id = "t:" + branch.Transition.GetInstanceID();
+						AddEdge(id, group.Id, destination, TransitionEdge, branch.Transition, branch.PortId, null);
+					}
+				}
+
+				// 畳み込まれなかったものは今までどおり直結。
+				for (int t = 0; t < grouping.Ungrouped.Count; t++)
+				{
+					AddTransitionEdge(from, grouping.Ungrouped[t], TransitionEdge);
 				}
 			}
 
@@ -606,7 +827,19 @@ namespace colloid.FXCreator.AnimatorGraph
 			AddEdge("t:" + transition.GetInstanceID(), fromNodeId, toNodeId, color, transition);
 		}
 
-		private void AddEdge(string id, string fromNodeId, string toNodeId, Color color, AnimatorTransitionBase transition)
+		/// <summary>
+		/// <paramref name="fromPortId"/> / <paramref name="toPortId"/> は畳み込みノード側の端だけ指定する。
+		/// 通常のノードの端は null にして縁に繋ぐ（ポートに寄せると平行エッジが重なるため）。
+		/// 畳み込みノードはポートごとに意味が違うので、そちらは寄せる必要がある。
+		/// </summary>
+		private void AddEdge(
+			string id,
+			string fromNodeId,
+			string toNodeId,
+			Color color,
+			AnimatorTransitionBase transition,
+			string fromPortId = null,
+			string toPortId = null)
 		{
 			if (id == null || fromNodeId == null || toNodeId == null)
 			{
@@ -616,9 +849,9 @@ namespace colloid.FXCreator.AnimatorGraph
 			{
 				Id = id,
 				FromNodeId = fromNodeId,
-				FromPortId = null,
+				FromPortId = fromPortId,
 				ToNodeId = toNodeId,
-				ToPortId = null,
+				ToPortId = toPortId,
 				Color = color
 			});
 			if (transition != null)
@@ -731,6 +964,14 @@ namespace colloid.FXCreator.AnimatorGraph
 					Vector2 target = node.GraphRect.position + graphDelta;
 					switch (node.Ref.Kind)
 					{
+						case AcNodeKind.Group:
+							// 畳み込みノードは Controller に居場所が無いのでサイドカーへ（§4.4）。
+							if (_layout != null && node.Group != null)
+							{
+								_layout.SetPosition(node.Group.Source, node.Group.Parameter, target);
+							}
+							break;
+
 						case AcNodeKind.State:
 							e.SetStatePosition(sm, node.Ref.AsState(), target);
 							break;
@@ -760,6 +1001,13 @@ namespace colloid.FXCreator.AnimatorGraph
 			}
 
 			AnimatorStateMachine sm = Current;
+
+			if (source.Ref.Kind == AcNodeKind.Group)
+			{
+				ConnectFromGroup(source, destination, from.PortId);
+				return;
+			}
+
 			using (AcEdit e = AcEdit.Begin(Controller, "Add Transition"))
 			{
 				switch (source.Ref.Kind)
@@ -822,6 +1070,101 @@ namespace colloid.FXCreator.AnimatorGraph
 		}
 
 		/// <summary>
+		/// 畳み込みノードのポートから伸ばす。ポートが表している条件をそのまま持つ
+		/// 遷移を新しく作る（§4.2 の逆方向の表）。switch の「新しい値」ポートだけは
+		/// 未使用の threshold を自分で選ぶ。
+		/// </summary>
+		private void ConnectFromGroup(AcGraphNode source, AcGraphNode destination, string portId)
+		{
+			AcTransitionGroup group = source.Group;
+			if (group == null || group.Source == null)
+			{
+				return;
+			}
+
+			AnimatorConditionMode mode;
+			float threshold = 0f;
+			if (group.Kind == AcGroupKind.Toggle)
+			{
+				mode = string.Equals(portId, AcTransitionGroup.TruePort, StringComparison.Ordinal)
+					? AnimatorConditionMode.If
+					: AnimatorConditionMode.IfNot;
+			}
+			else
+			{
+				mode = AnimatorConditionMode.Equals;
+				threshold = string.Equals(portId, NewBranchPort, StringComparison.Ordinal)
+					? NextFreeThreshold(group)
+					: ThresholdOfPort(group, portId);
+			}
+
+			AnimatorStateMachine sm = Current;
+			using (AcEdit e = AcEdit.Begin(Controller, "Add Branch"))
+			{
+				AnimatorStateTransition transition;
+				if (destination.Ref.Kind == AcNodeKind.Exit)
+				{
+					transition = e.AddExitTransition(group.Source);
+				}
+				else if (destination.Ref.Kind == AcNodeKind.StateMachine)
+				{
+					transition = e.AddTransition(group.Source, destination.Ref.AsStateMachine());
+				}
+				else
+				{
+					transition = e.AddTransition(group.Source, destination.Ref.AsState());
+				}
+
+				// 畳み込みの条件を満たす形で作らないと、次の再構築でこのグループに入らない。
+				e.Modify(transition, () => transition.hasExitTime = false);
+				e.SetConditions(transition, new[]
+				{
+					new AnimatorCondition { parameter = group.Parameter, mode = mode, threshold = threshold }
+				});
+			}
+		}
+
+		private static bool IsGroupOutputPort(AcTransitionGroup group, string portId)
+		{
+			if (string.IsNullOrEmpty(portId) || string.Equals(portId, AcGraphPort.InId, StringComparison.Ordinal))
+			{
+				return false;
+			}
+			if (group.Kind == AcGroupKind.Switch && string.Equals(portId, NewBranchPort, StringComparison.Ordinal))
+			{
+				return true;
+			}
+			return group.PortIds.Contains(portId);
+		}
+
+		private static float ThresholdOfPort(AcTransitionGroup group, string portId)
+		{
+			for (int i = 0; i < group.Branches.Count; i++)
+			{
+				if (string.Equals(group.Branches[i].PortId, portId, StringComparison.Ordinal))
+				{
+					return group.Branches[i].Transition.conditions[0].threshold;
+				}
+			}
+			return 0f;
+		}
+
+		private static float NextFreeThreshold(AcTransitionGroup group)
+		{
+			var used = new HashSet<float>();
+			for (int i = 0; i < group.Branches.Count; i++)
+			{
+				used.Add(group.Branches[i].Transition.conditions[0].threshold);
+			}
+			float candidate = 0f;
+			while (used.Contains(candidate))
+			{
+				candidate += 1f;
+			}
+			return candidate;
+		}
+
+		/// <summary>
 		/// 接続できる組み合わせかを判定し、両端のノードを返す。
 		/// 標準 Animator ウィンドウで作れる遷移だけを許す。
 		/// </summary>
@@ -835,8 +1178,7 @@ namespace colloid.FXCreator.AnimatorGraph
 			{
 				return false;
 			}
-			if (!string.Equals(from.PortId, AcGraphPort.OutId, StringComparison.Ordinal)
-				|| !string.Equals(to.PortId, AcGraphPort.InId, StringComparison.Ordinal))
+			if (!string.Equals(to.PortId, AcGraphPort.InId, StringComparison.Ordinal))
 			{
 				return false;
 			}
@@ -845,11 +1187,32 @@ namespace colloid.FXCreator.AnimatorGraph
 				return false;
 			}
 
+			// 畳み込みノードは出力ポートが分岐そのものなので、"out" ではなく
+			// そのポートIDから伸ばす。入力側（State → グループ）は遷移から導出される
+			// 線なので、ユーザーには引かせない。
+			if (source.Ref.Kind == AcNodeKind.Group)
+			{
+				if (source.Group == null || !IsGroupOutputPort(source.Group, from.PortId))
+				{
+					return false;
+				}
+			}
+			else if (!string.Equals(from.PortId, AcGraphPort.OutId, StringComparison.Ordinal))
+			{
+				return false;
+			}
+
+			if (destination.Ref.Kind == AcNodeKind.Group)
+			{
+				return false;
+			}
+
 			// 出られる側 / 入れる側。
 			bool sourceOk = source.Ref.Kind == AcNodeKind.State
 				|| source.Ref.Kind == AcNodeKind.StateMachine
 				|| source.Ref.Kind == AcNodeKind.Any
-				|| source.Ref.Kind == AcNodeKind.Entry;
+				|| source.Ref.Kind == AcNodeKind.Entry
+				|| source.Ref.Kind == AcNodeKind.Group;
 			bool destinationOk = destination.Ref.Kind == AcNodeKind.State
 				|| destination.Ref.Kind == AcNodeKind.StateMachine
 				|| destination.Ref.Kind == AcNodeKind.Exit;
@@ -859,9 +1222,11 @@ namespace colloid.FXCreator.AnimatorGraph
 			}
 
 			// Any と Entry から Exit へは引けない（標準 Animator ウィンドウと同じ）。
+			// 畳み込みノードは State の遷移そのものなので Exit へ引ける。
 			if (destination.Ref.Kind == AcNodeKind.Exit
 				&& source.Ref.Kind != AcNodeKind.State
-				&& source.Ref.Kind != AcNodeKind.StateMachine)
+				&& source.Ref.Kind != AcNodeKind.StateMachine
+				&& source.Ref.Kind != AcNodeKind.Group)
 			{
 				return false;
 			}
@@ -886,6 +1251,7 @@ namespace colloid.FXCreator.AnimatorGraph
 			// 特殊ノードは消せない。消せるものが無ければ Undo 段も作らない。
 			var states = new List<AnimatorState>();
 			var machines = new List<AnimatorStateMachine>();
+			var groupTransitions = new List<AnimatorTransitionBase>();
 			for (int i = 0; i < nodeIds.Count; i++)
 			{
 				AcGraphNode node;
@@ -901,14 +1267,26 @@ namespace colloid.FXCreator.AnimatorGraph
 				{
 					machines.Add(node.Ref.AsStateMachine());
 				}
+				else if (node.Ref.Kind == AcNodeKind.Group && node.Group != null)
+				{
+					// 畳み込みノードに実体は無いので、束ねている遷移をまとめて消す。
+					for (int b = 0; b < node.Group.Branches.Count; b++)
+					{
+						groupTransitions.Add(node.Group.Branches[b].Transition);
+					}
+				}
 			}
-			if (states.Count == 0 && machines.Count == 0)
+			if (states.Count == 0 && machines.Count == 0 && groupTransitions.Count == 0)
 			{
 				return;
 			}
 
 			using (AcEdit e = AcEdit.Begin(Controller, "Delete"))
 			{
+				for (int i = 0; i < groupTransitions.Count; i++)
+				{
+					e.RemoveTransition(groupTransitions[i]);
+				}
 				for (int i = 0; i < states.Count; i++)
 				{
 					e.RemoveState(sm, states[i]);
@@ -1004,6 +1382,30 @@ namespace colloid.FXCreator.AnimatorGraph
 			});
 		}
 
+		/// <summary>
+		/// 「本当は畳み込めるのに Expand されている」パラメータ。
+		/// 展開を無視して畳み込み直した結果と、いまの結果を突き合わせて求める。
+		/// </summary>
+		private List<string> ExpandedParametersOf(AnimatorState state)
+		{
+			var result = new List<string>();
+			if (_layout == null)
+			{
+				return result;
+			}
+
+			AcGroupingResult ifCollapsed = AcTransitionGrouping.Collapse(state);
+			for (int i = 0; i < ifCollapsed.Groups.Count; i++)
+			{
+				string parameter = ifCollapsed.Groups[i].Parameter;
+				if (_layout.IsExpanded(state, parameter))
+				{
+					result.Add(parameter);
+				}
+			}
+			return result;
+		}
+
 		private void PopulateNodeMenu(GenericMenu menu, AnimatorStateMachine sm, AcGraphNode node)
 		{
 			if (node.Ref.Kind == AcNodeKind.State)
@@ -1023,6 +1425,16 @@ namespace colloid.FXCreator.AnimatorGraph
 						}
 					});
 				}
+				// 畳み込みを解除した (State, パラメータ) は戻す口がここにしか無い
+				// （グループノードが消えているので、そちらの右クリックは出せない）。
+				List<string> collapsible = ExpandedParametersOf(state);
+				for (int i = 0; i < collapsible.Count; i++)
+				{
+					string parameter = collapsible[i];
+					menu.AddItem(new GUIContent("Collapse \"" + parameter + "\""), false,
+						() => SetGroupExpanded(state, parameter, false));
+				}
+
 				menu.AddSeparator(string.Empty);
 				menu.AddItem(new GUIContent("Delete State"), false, () =>
 				{
@@ -1044,6 +1456,26 @@ namespace colloid.FXCreator.AnimatorGraph
 					using (AcEdit e = AcEdit.Begin(Controller, "Delete Sub-State Machine"))
 					{
 						e.RemoveStateMachine(sm, child);
+					}
+				});
+				return;
+			}
+
+			if (node.Ref.Kind == AcNodeKind.Group && node.Group != null)
+			{
+				AcTransitionGroup group = node.Group;
+				// Expand は Controller を一切変えず、サイドカーに印を付けるだけ（§4.2）。
+				menu.AddItem(new GUIContent("Expand (畳み込みを解除)"), false,
+					() => SetGroupExpanded(group.Source, group.Parameter, true));
+				menu.AddSeparator(string.Empty);
+				menu.AddItem(new GUIContent("Delete Branches"), false, () =>
+				{
+					using (AcEdit e = AcEdit.Begin(Controller, "Delete Branches"))
+					{
+						for (int i = 0; i < group.Branches.Count; i++)
+						{
+							e.RemoveTransition(group.Branches[i].Transition);
+						}
 					}
 				});
 				return;
