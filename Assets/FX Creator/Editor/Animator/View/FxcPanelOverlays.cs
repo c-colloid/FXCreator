@@ -20,44 +20,61 @@ namespace colloid.FXCreator.AnimatorGraph.View
 	///
 	/// 自前でオーバーレイを作らず Unity の Overlay に載せている。
 	/// フローティングと端へのドッキングの切り替え、折り畳み、表示の on/off、
-	/// 位置の保存が標準で付いてくるので、こちらで持つのは中身だけで済む。
+	/// 位置と大きさの保存が標準で付いてくるので、こちらで持つのは中身だけで済む。
 	///
 	/// ドッキングした3枚を常設していたときはグラフが<b>ウィンドウの29%</b>しか
 	/// 残らなかった（実測）。主役はグラフなので、必要なときだけ出す形にした。
 	/// </summary>
 	public abstract class FxcPanelOverlay : Overlay, IFxcPanel
 	{
-		private FxcAnimatorWindow _window;
-
 		/// <summary>パネルは自由に大きさを変えたいので、ツールバー形態は持たない。</summary>
 		protected override Layout supportedLayouts => Layout.Panel;
 
+		/// <summary>初回に開いたときの大きさ。以降は Overlay 側が覚えた値を使う。</summary>
+		protected abstract Vector2 InitialSize { get; }
+
 		public override void OnCreated()
 		{
-			_window = containerWindow as FxcAnimatorWindow;
-			if (_window != null)
-			{
-				_window.RegisterPanel(this);
-			}
+			minSize = new Vector2(180f, 90f);
+			maxSize = new Vector2(1200f, 1200f);
+			Window?.RegisterPanel(this);
 		}
 
 		public override void OnWillBeDestroyed()
 		{
-			if (_window != null)
-			{
-				_window.UnregisterPanel(this);
-				_window = null;
-			}
+			Window?.UnregisterPanel(this);
 		}
 
 		public abstract void ApplyTarget(AnimatorController controller, bool readOnly, GameObject avatar);
 
-		/// <summary>中身の既定の大きさ。Overlay 側が覚えるまでの初期値。</summary>
-		protected static T Sized<T>(T element, float width, float height) where T : VisualElement
+		protected FxcAnimatorWindow Window => containerWindow as FxcAnimatorWindow;
+
+		/// <summary>
+		/// 各パネルの <see cref="Overlay.CreatePanelContent"/> はこれを通す。
+		/// 中身を広げる・大きさを決める・表示対象を入れ直す、の3つをまとめる。
+		/// </summary>
+		protected T BuildContent<T>(T view) where T : VisualElement
 		{
-			element.style.width = width;
-			element.style.height = height;
-			return element;
+			// 中身に width / height を直接書くとその値で固定され、
+			// <b>掴んでもリサイズできなくなる</b>。広がる指定だけ与える。
+			view.style.flexGrow = 1;
+			view.style.minWidth = 0f;
+			view.style.minHeight = 0f;
+
+			// 大きさが未設定のときだけ初期値を入れる。未設定は <b>NaN</b> で来る
+			// （NaN との比較は常に false なので「size.x < 1」では判定できない）。
+			// NaN のままだと内容に合わせた固定サイズになり、これもリサイズできない。
+			// なお OnCreated で入れても、そのあと Unity が保存値（NaN）で上書きするので
+			// ここ（パネルを開いた時点）で入れる。
+			if (float.IsNaN(size.x) || float.IsNaN(size.y) || size.x < 1f || size.y < 1f)
+			{
+				size = InitialSize;
+			}
+
+			// 非表示 → 再表示のたびにここがやり直されるので、
+			// 表示対象を入れ直さないと空のまま出てくる。
+			Window?.RefreshPanel(this);
+			return view;
 		}
 	}
 
@@ -69,9 +86,11 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		private ParameterListView _view;
 
+		protected override Vector2 InitialSize => new Vector2(250f, 240f);
+
 		public override VisualElement CreatePanelContent()
 		{
-			_view = Sized(new ParameterListView(), 250f, 240f);
+			_view = BuildContent(new ParameterListView());
 			return _view;
 		}
 
@@ -92,9 +111,11 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		private Vrc.VrcParameterPanel _view;
 
+		protected override Vector2 InitialSize => new Vector2(420f, 220f);
+
 		public override VisualElement CreatePanelContent()
 		{
-			_view = Sized(new Vrc.VrcParameterPanel(), 420f, 220f);
+			_view = BuildContent(new Vrc.VrcParameterPanel());
 			return _view;
 		}
 
@@ -123,9 +144,11 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		private Vrc.VrcMenuPanel _view;
 
+		protected override Vector2 InitialSize => new Vector2(420f, 200f);
+
 		public override VisualElement CreatePanelContent()
 		{
-			_view = Sized(new Vrc.VrcMenuPanel(), 420f, 200f);
+			_view = BuildContent(new Vrc.VrcMenuPanel());
 			return _view;
 		}
 

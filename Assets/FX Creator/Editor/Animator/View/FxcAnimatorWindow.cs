@@ -194,6 +194,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			bar.Add(new ToolbarButton(() => _graph.FrameAll()) { text = "Frame All" });
 			bar.Add(new ToolbarButton(Rebuild) { text = "Refresh" });
+			bar.Add(BuildPanelMenu());
 
 			return bar;
 		}
@@ -358,9 +359,9 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		/// 出ているフローティングパネル（§6）。Overlay は Unity が生成・破棄するので、
 		/// ウィンドウ側は「いま出ているもの」だけを持ち、表示対象が変わったら配る。
 		/// </summary>
-		private readonly List<IFxcPanel> _panels = new List<IFxcPanel>();
+		private readonly List<FxcPanelOverlay> _panels = new List<FxcPanelOverlay>();
 
-		internal void RegisterPanel(IFxcPanel panel)
+		internal void RegisterPanel(FxcPanelOverlay panel)
 		{
 			if (panel == null || _panels.Contains(panel))
 			{
@@ -370,12 +371,72 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			PushTargetTo(panel);
 		}
 
-		internal void UnregisterPanel(IFxcPanel panel)
+		internal void UnregisterPanel(FxcPanelOverlay panel)
 		{
 			_panels.Remove(panel);
 		}
 
-		private void PushTargetTo(IFxcPanel panel)
+		/// <summary>再表示などで中身が作り直されたパネルに、表示対象を入れ直す。</summary>
+		internal void RefreshPanel(FxcPanelOverlay panel)
+		{
+			if (panel != null)
+			{
+				PushTargetTo(panel);
+			}
+		}
+
+		private FxcPanelOverlay FindPanel(string id)
+		{
+			for (int i = 0; i < _panels.Count; i++)
+			{
+				if (_panels[i].id == id)
+				{
+					return _panels[i];
+				}
+			}
+			return null;
+		}
+
+		/// <summary>
+		/// パネルの表示切替。Unity 標準のオーバーレイメニューだけだと
+		/// 一度隠したパネルの戻し方が分からないので、ツールバーにも口を用意する。
+		/// </summary>
+		private VisualElement BuildPanelMenu()
+		{
+			var menu = new ToolbarMenu { text = "Panels" };
+
+			void Add(string label, string id)
+			{
+				menu.menu.AppendAction(
+					label,
+					_ =>
+					{
+						FxcPanelOverlay panel = FindPanel(id);
+						if (panel != null)
+						{
+							panel.displayed = !panel.displayed;
+						}
+					},
+					_ =>
+					{
+						FxcPanelOverlay panel = FindPanel(id);
+						if (panel == null)
+						{
+							return DropdownMenuAction.Status.Disabled;
+						}
+						return panel.displayed
+							? DropdownMenuAction.Status.Checked
+							: DropdownMenuAction.Status.Normal;
+					});
+			}
+
+			Add("VAR", VarOverlay.OverlayId);
+			Add("parameter", VrcParameterOverlay.OverlayId);
+			Add("menu", VrcMenuOverlay.OverlayId);
+			return menu;
+		}
+
+		private void PushTargetTo(FxcPanelOverlay panel)
 		{
 			// パネルはウィンドウより先に作られることがある（レイアウト復元時）。
 			// その場合 _source がまだ無いので、編集可否は「不可」に倒しておく。
@@ -478,7 +539,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			// parameter / menu は既定で隠れている。出し方が分からないと存在に気づけないので、
 			// Unity 標準のオーバーレイメニューの開き方をここに書いておく。
 			string mode = _source.CanEdit
-				? "右クリックで追加 · ポートからドラッグで遷移 · Delete で削除 · ` でパネル"
+				? "右クリックで追加 · ポートからドラッグで遷移 · Delete で削除"
 				: (_source.ReadOnlyReason ?? "読み取り専用");
 
 			_status.text = string.Format(

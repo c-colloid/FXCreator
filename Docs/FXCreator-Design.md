@@ -533,11 +533,26 @@ public struct PreviewRequest
 > `VarOverlay` は既定で表示、`parameter` と `menu` は既定で非表示
 > （必要なときに `` ` `` キーかキャンバスの右クリックで出す。ステータス行に案内を出している）。
 >
-> 実装上の注意: `Overlay.supportedLayouts` は `protected internal` なので、
-> 別アセンブリから override するときは `protected` にする（`protected internal` だと CS0507）。
-> パネル本体（`ParameterListView` 等）は `VisualElement` として自己完結させてあるので、
-> `CreatePanelContent()` から返すだけで載せ替えられた。中身の作り直しは不要。
-> 見出しは Overlay 側が出すので、パネル内の見出しは外すこと（同じ文字が2行並ぶ）。
+> 実装上の注意（どれも実際に踏んだ）:
+> - `Overlay.supportedLayouts` は `protected internal`。別アセンブリから override するときは
+>   `protected` にする（`protected internal` だと CS0507）。
+> - パネル本体（`ParameterListView` 等）は `VisualElement` として自己完結させてあるので、
+>   `CreatePanelContent()` から返すだけで載せ替えられた。中身の作り直しは不要。
+> - 見出しは Overlay 側が出すので、パネル内の見出しは外す（同じ文字が2行並ぶ）。
+> - **中身に `width` / `height` を直接指定しない。** 指定するとその値で固定され、
+>   掴んでもリサイズできなくなる。中身は `flexGrow` で広げ、大きさは `Overlay.size`
+>   （と `minSize` / `maxSize`）で決める。
+> - **未設定の `Overlay.size` は `NaN`。** NaN との比較は常に false なので
+>   `size.x < 1` では判定できず、`float.IsNaN` が要る。NaN のままだと内容に合わせた
+>   固定サイズになり、これもリサイズできない。
+>   さらに `OnCreated` で入れても<b>その後 Unity が保存値（NaN）で上書きする</b>ので、
+>   `CreatePanelContent()`（＝パネルを開いた時点）で入れる。
+> - 非表示 → 再表示のたびに `CreatePanelContent()` がやり直される。
+>   このとき表示対象を入れ直さないと<b>空のパネルが出てくる</b>。
+> - `OverlayCanvas` に public な検索 API が無いので、ウィンドウ側は
+>   `OnCreated` / `OnWillBeDestroyed` で自分に登録させて一覧を持つ。
+>   一度隠すと標準のオーバーレイメニューしか戻す手段が無く分かりにくいので、
+>   ツールバーに **Panels** ドロップダウン（チェック付き）を用意した。
 
 ### 6.1 「VAR」パネル
 
