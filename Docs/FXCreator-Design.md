@@ -657,6 +657,37 @@ UI そのものは自動テストせず、`uloop-screenshot` / `uloop-run-tests`
 
 **ゲート**: グラフで作った構造が標準 Animator ウィンドウで正しく見え、Undo/Redo が破綻しない。**ここが v0.1 の技術的な山。**
 
+#### 3.1 実施記録（2026-09-14）
+
+R1 の対策どおりテストファーストで実施。`AcEdit` と `AcEditTests` を先に固めてから UI を繋いだ。
+
+| 判断 | 内容 | 理由 |
+|------|------|------|
+| 削除は「先に参照を掃除してから本体を消す」 | `RemoveState` / `RemoveStateMachine` は、まず `PurgeReferencesTo` で<b>Controller 全レイヤー</b>を走査して自分宛ての遷移と `defaultState` 参照を外し、それから本体を消す | Unity の `RemoveState` は呼び出したステートマシンが持つ参照しか面倒を見ない。残すと `destinationState` が null の遷移＝グラフに描けない幽霊になる |
+| `RemoveTransition` は所有者を自分で探す | レイヤー木を走査して State / Any / Entry / StateMachine遷移のどれが持っているか突き止める | 呼び出し側（グラフ・インスペクタ）に「この遷移は誰のものか」を覚えさせない。エッジIDから遷移オブジェクトしか復元できないので必要 |
+| 例外時のロールバックは各操作を包んで実現 | 公開操作を `Guard` で包み、例外なら `_failed` を立てて投げ直す。`Dispose` がそれを見て `Undo.RevertAllDownToGroup` | C# では `Dispose` の中から「例外で抜けたのか」を直接は判定できない。設計書の `using` 記法（明示コミット無し）を保ったまま巻き戻すための形 |
+| `Begin` の入れ子を許す | 内側は外側の Undo グループと `AcEditReport` を共有し、畳むのは一番外だけ | インスペクタの1フィールド変更がグラフ操作の中から呼ばれても、Undo が2段に割れない |
+| `Modify(target, apply)` を用意した | プロパティ1つごとに専用メソッドを生やす代わりに、記録して書き換えるだけの汎用口 | `ElementInspector` のフィールド数だけ API が増えるのを避けた。落とし穴があるのは<b>構造変更</b>で、単純なプロパティ代入ではない |
+| ポートは「遷移を引く取っ手」に限定し、**エッジはノードの縁から縁へ描いたまま** | `AcGraphEdge.FromPortId` / `ToPortId` は null のまま | ポートに寄せると、同じ2ノード間の複数遷移が完全に重なって1本に見える。`FXCEdgeLayer` の平行エッジオフセットは端点がノードの縁のときだけ効く |
+| 保存先の無い Controller を読み取り専用にした | `CanEdit` は `AssetDatabase.GetAssetPath` が空、または `Packages/` 配下なら false。理由を `ReadOnlyReason` で UI に出す | 書いても保存されない対象に編集 UI を出すと、消える変更を作らせてしまう |
+| 編集後の作り直しは `AcEdit.AfterEdit` 経由 | `AcGraphSource` が購読し、`report.Controller` が自分の対象のときだけ `Refresh` | ウィンドウを複数開いても混ざらない。静的イベントなので `AcGraphSource` は `IDisposable` にして必ず外す |
+| `ElementInspector` は再構築と値同期を分けた | 対象が変わったときだけ作り直し、Undo や外部変更では `SyncValues()` で値だけ差し替える | 作り直すと入力中のフィールドからフォーカスが飛ぶ |
+| 条件の行はパラメータ型で選択肢を絞る | Bool に `Greater` を出さない。パラメータが消えて宙に浮いた条件は「(見つかりません)」付きで名前を残す | 黙って別のパラメータに化けると気づけない |
+
+**§11-5 の宿題（ウィンドウ分割）**: `TwoPaneSplitView` の入れ子で足りることを実機で確認した。
+外側 `[レイヤー一覧 | 右]`、内側 `[グラフ列 | ElementInspector]`（右を固定幅）。
+
+**ゲート確認（2026-09-14）**:
+- 空の Controller にグラフ操作だけで State 2つ・相互遷移・条件1つを作り、**標準 Animator ウィンドウで
+  そのとおりに表示されることを確認**（既定ステートのオレンジ、位置、双方向の矢印まで一致）。
+- Undo 5回で作った順に1段ずつ戻り（条件 → 遷移 → 遷移 → State → State）、Redo で復元。
+  **1操作 = 1 Undo 段**が守られている。
+- 遷移を Undo で消したあと、サブアセットに残るのは State 2つとステートマシンだけ（迷子なし）。
+- EditMode テスト 68/68（`AcEditTests` 18 + `AcGraphEditingTests` 20 + Phase 2 の 30）。
+
+**まだ無いもの**: パラメータの追加・改名（Phase 6）、コピー/ペースト・自動レイアウト（v0.2）、
+`AnimatorStateTransition.interruptionSource` などの詳細（必要になったら足す）。
+
 ### Phase 4 — toggle / switch ノード（1.5日）
 
 | | タスク | 見積 |

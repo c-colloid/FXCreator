@@ -28,6 +28,12 @@ namespace colloid.FXCreator.Tests
 		[TearDown]
 		public void TearDown()
 		{
+			for (int i = 0; i < _sources.Count; i++)
+			{
+				_sources[i].Dispose();
+			}
+			_sources.Clear();
+
 			var garbage = new List<Object>();
 			for (int i = 0; i < _controllers.Count; i++)
 			{
@@ -102,9 +108,16 @@ namespace colloid.FXCreator.Tests
 			return controller.layers[0].stateMachine;
 		}
 
-		private static AcGraphSource Open(AnimatorController controller)
+		private readonly List<AcGraphSource> _sources = new List<AcGraphSource>();
+
+		/// <summary>
+		/// <see cref="AcGraphSource"/> は静的な <c>AcEdit.AfterEdit</c> を購読するので、
+		/// テストごとに必ず畳む（放っておくとドメインリロードまで積み上がる）。
+		/// </summary>
+		private AcGraphSource Open(AnimatorController controller)
 		{
 			var source = new AcGraphSource();
+			_sources.Add(source);
 			source.SetController(controller);
 			return source;
 		}
@@ -359,8 +372,7 @@ namespace colloid.FXCreator.Tests
 		[Test]
 		public void MissingControllerYieldsAnEmptyGraphInsteadOfThrowing()
 		{
-			var source = new AcGraphSource();
-			source.SetController(null);
+			AcGraphSource source = Open(null);
 
 			Assert.That(source.Current, Is.Null);
 			Assert.That(source.Nodes, Is.Empty);

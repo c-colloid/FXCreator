@@ -12,18 +12,55 @@ namespace colloid.FXCreator.AnimatorGraph
 	/// Animator 固有の情報（実体への参照、3行目のテキスト）を足しただけの入れ物。
 	/// ビュー側（<c>Animator/View/</c>）はこの型にキャストして追加情報を読む。
 	/// </summary>
+	/// <summary>
+	/// ノードの接続点。Phase 3 では<b>遷移を引くための取っ手</b>としてだけ使う。
+	/// エッジ自体はノードの縁から縁へ描く（<see cref="IFXCGraphEdge.FromPortId"/> を
+	/// null のままにする）ので、同じ2ノード間に複数の遷移があっても
+	/// <c>FXCEdgeLayer</c> の平行エッジオフセットが効き、標準 Animator ウィンドウと
+	/// 同じ見え方を保てる。ポートに寄せると重なって1本に見えてしまう。
+	/// </summary>
+	public sealed class AcGraphPort : IFXCGraphPort
+	{
+		public const string InId = "in";
+		public const string OutId = "out";
+
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public FXCPortDirection Direction { get; set; }
+		public Color Color { get; set; }
+
+		private static readonly AcGraphPort In = new AcGraphPort
+		{
+			Id = InId,
+			Name = "In",
+			Direction = FXCPortDirection.Input,
+			Color = new Color(0.40f, 0.58f, 0.85f)
+		};
+
+		private static readonly AcGraphPort Out = new AcGraphPort
+		{
+			Id = OutId,
+			Name = "Out",
+			Direction = FXCPortDirection.Output,
+			Color = new Color(0.85f, 0.55f, 0.40f)
+		};
+
+		public static readonly IFXCGraphPort[] None = new IFXCGraphPort[0];
+		public static readonly IFXCGraphPort[] InOnly = { In };
+		public static readonly IFXCGraphPort[] OutOnly = { Out };
+		public static readonly IFXCGraphPort[] InAndOut = { In, Out };
+	}
+
 	public sealed class AcGraphNode : IFXCGraphNode
 	{
-		private static readonly IFXCGraphPort[] NoPorts = new IFXCGraphPort[0];
-
 		public string Id { get; set; }
 		public string Title { get; set; }
 		public string Subtitle { get; set; }
 		public Rect GraphRect { get; set; }
 		public Color AccentColor { get; set; }
 
-		/// <summary>Phase 2 はポートを使わない（エッジはノードの縁に繋がる）。Phase 4 で toggle/switch が使う。</summary>
-		public IReadOnlyList<IFXCGraphPort> Ports => NoPorts;
+		/// <summary>遷移を引くための取っ手。種類ごとに In / Out の有無が決まる。</summary>
+		public IReadOnlyList<IFXCGraphPort> Ports { get; set; } = AcGraphPort.None;
 
 		/// <summary>指している Unity 側の実体。</summary>
 		public AcNodeRef Ref { get; set; }
@@ -54,10 +91,11 @@ namespace colloid.FXCreator.AnimatorGraph
 	/// 位置も Controller がネイティブに持つ値をそのまま使うので、
 	/// 標準 Animator ウィンドウと配置が一致する。
 	///
-	/// Phase 2 は読み取り専用（<see cref="CanEdit"/> / <see cref="CanMoveNodes"/> が false）。
-	/// 書き込みは Phase 3 の <c>AcEdit</c> が入ってから開ける。
+	/// 書き込みはすべて <see cref="AcEdit"/> を通す（Undo・サブアセット・配列コピーの
+	/// 面倒はあちらが見る）。編集が確定すると <see cref="AcEdit.AfterEdit"/> が飛ぶので、
+	/// それを受けて作り直す。
 	/// </summary>
-	public sealed class AcGraphSource : IFXCGraphSource
+	public sealed class AcGraphSource : IFXCGraphSource, IDisposable
 	{
 		#region Layout constants
 
@@ -112,6 +150,7 @@ namespace colloid.FXCreator.AnimatorGraph
 		private string _exitNodeId;
 		private string _anyNodeId;
 		private string _parentNodeId;
+		private bool _readOnly;
 
 		public event Action Changed;
 
@@ -129,9 +168,35 @@ namespace colloid.FXCreator.AnimatorGraph
 
 		public IReadOnlyList<IFXCGraphEdge> Edges => _edges;
 
-		// Phase 2 は読み取り専用。書き込みは Phase 3（AcEdit）で開ける。
-		public bool CanMoveNodes => false;
-		public bool CanEdit => false;
+		public bool CanMoveNodes => CanEdit;
+
+		/// <summary>
+		/// 書き換えてよい対象か。読み取り専用の場所（パッケージ同梱など）にある
+		/// Controller を掴んだまま編集 UI を出すと、保存できない変更を作ってしまう。
+		/// </summary>
+		public bool CanEdit => Controller != null && !_readOnly && Current != null;
+
+		/// <summary>読み取り専用と判断した理由（UI に出す）。編集できるなら null。</summary>
+		public string ReadOnlyReason { get; private set; }
+
+		public AcGraphSource()
+		{
+			AcEdit.AfterEdit += OnAfterEdit;
+		}
+
+		public void Dispose()
+		{
+			AcEdit.AfterEdit -= OnAfterEdit;
+		}
+
+		private void OnAfterEdit(AcEditReport report)
+		{
+			// 他の Controller の編集には反応しない（ウィンドウが複数開いていても混ざらない）。
+			if (report != null && report.Controller == Controller)
+			{
+				Refresh();
+			}
+		}
 
 		#region Target selection
 
@@ -140,7 +205,33 @@ namespace colloid.FXCreator.AnimatorGraph
 			Controller = controller;
 			LayerIndex = 0;
 			_path.Clear();
+			EvaluateWritability();
 			Refresh();
+		}
+
+		private void EvaluateWritability()
+		{
+			_readOnly = false;
+			ReadOnlyReason = null;
+
+			if (Controller == null)
+			{
+				return;
+			}
+
+			string path = AssetDatabase.GetAssetPath(Controller);
+			if (string.IsNullOrEmpty(path))
+			{
+				_readOnly = true;
+				ReadOnlyReason = "アセットとして保存されていない Controller です";
+				return;
+			}
+			if (path.StartsWith("Packages/", StringComparison.Ordinal))
+			{
+				// 不変パッケージ内のアセットは書き換えても保存されない。
+				_readOnly = true;
+				ReadOnlyReason = "パッケージ内の Controller なので編集できません";
+			}
 		}
 
 		/// <summary>レイヤーを切り替える。潜っていたサブステートマシンからは出る。</summary>
@@ -323,6 +414,7 @@ namespace colloid.FXCreator.AnimatorGraph
 					Info = DescribeState(state),
 					IsDefault = isDefault,
 					AccentColor = isDefault ? DefaultStateAccent : StateAccent,
+					Ports = AcGraphPort.InAndOut,
 					GraphRect = new Rect(states[i].position.x, states[i].position.y, StateSize.x, StateSize.y)
 				};
 				AddNode(node);
@@ -346,6 +438,7 @@ namespace colloid.FXCreator.AnimatorGraph
 					Subtitle = DescribeStateMachine(child),
 					Info = null,
 					AccentColor = SubMachineAccent,
+					Ports = AcGraphPort.InAndOut,
 					GraphRect = new Rect(children[i].position.x, children[i].position.y, StateSize.x, StateSize.y)
 				};
 				AddNode(node);
@@ -364,10 +457,30 @@ namespace colloid.FXCreator.AnimatorGraph
 				Subtitle = null,
 				Info = null,
 				AccentColor = fill,
+				Ports = PortsFor(kind),
 				GraphRect = new Rect(position.x, position.y, SpecialSize.x, SpecialSize.y)
 			};
 			AddNode(node);
 			return node.Id;
+		}
+
+		/// <summary>
+		/// 特殊ノードのポート構成。Any と Entry は出るだけ、Exit は入るだけ。
+		/// (Up) は遷移の端点になれないので取っ手を出さない
+		/// （表示中ステートマシンの外への遷移は親の側が持つ＝ここでは作れない）。
+		/// </summary>
+		private static IReadOnlyList<IFXCGraphPort> PortsFor(AcNodeKind kind)
+		{
+			switch (kind)
+			{
+				case AcNodeKind.Any:
+				case AcNodeKind.Entry:
+					return AcGraphPort.OutOnly;
+				case AcNodeKind.Exit:
+					return AcGraphPort.InOnly;
+				default:
+					return AcGraphPort.None;
+			}
 		}
 
 		private void AddNode(AcGraphNode node)
@@ -589,29 +702,357 @@ namespace colloid.FXCreator.AnimatorGraph
 
 		#endregion
 
-		#region IFXCGraphSource (read-only in Phase 2)
+		#region Editing
 
+		/// <summary>
+		/// ドラッグで動かしたノードの位置を書き戻す。ビューは離した時に
+		/// 合計移動量で1回だけ呼ぶので、1ドラッグ = 1 Undo になる。
+		/// <see cref="AcGraphNode.GraphRect"/> は Controller から読んだ値（＝ドラッグ前）
+		/// なので、そこに差分を足したものが新しい位置。
+		/// </summary>
 		public void MoveNodes(IReadOnlyList<string> nodeIds, Vector2 graphDelta)
 		{
-			// Phase 3（AcEdit）で位置の書き戻しを入れるまでは動かせない。
+			AnimatorStateMachine sm = Current;
+			if (!CanEdit || nodeIds == null || nodeIds.Count == 0)
+			{
+				return;
+			}
+
+			using (AcEdit e = AcEdit.Begin(Controller, nodeIds.Count > 1 ? "Move Nodes" : "Move Node"))
+			{
+				for (int i = 0; i < nodeIds.Count; i++)
+				{
+					AcGraphNode node;
+					if (!TryGetNode(nodeIds[i], out node))
+					{
+						continue;
+					}
+
+					Vector2 target = node.GraphRect.position + graphDelta;
+					switch (node.Ref.Kind)
+					{
+						case AcNodeKind.State:
+							e.SetStatePosition(sm, node.Ref.AsState(), target);
+							break;
+						case AcNodeKind.StateMachine:
+							e.SetStateMachinePosition(sm, node.Ref.AsStateMachine(), target);
+							break;
+						default:
+							e.SetSpecialPosition(sm, node.Ref.Kind, target);
+							break;
+					}
+				}
+			}
 		}
 
-		public bool CanConnect(FXCPortRef from, FXCPortRef to) => false;
+		public bool CanConnect(FXCPortRef from, FXCPortRef to)
+		{
+			AcGraphNode source, destination;
+			return TryResolveConnection(from, to, out source, out destination);
+		}
 
 		public void Connect(FXCPortRef from, FXCPortRef to)
 		{
+			AcGraphNode source, destination;
+			if (!TryResolveConnection(from, to, out source, out destination))
+			{
+				return;
+			}
+
+			AnimatorStateMachine sm = Current;
+			using (AcEdit e = AcEdit.Begin(Controller, "Add Transition"))
+			{
+				switch (source.Ref.Kind)
+				{
+					case AcNodeKind.State:
+						AnimatorState fromState = source.Ref.AsState();
+						if (destination.Ref.Kind == AcNodeKind.Exit)
+						{
+							e.AddExitTransition(fromState);
+						}
+						else if (destination.Ref.Kind == AcNodeKind.StateMachine)
+						{
+							e.AddTransition(fromState, destination.Ref.AsStateMachine());
+						}
+						else
+						{
+							e.AddTransition(fromState, destination.Ref.AsState());
+						}
+						break;
+
+					case AcNodeKind.StateMachine:
+						AnimatorStateMachine fromMachine = source.Ref.AsStateMachine();
+						if (destination.Ref.Kind == AcNodeKind.Exit)
+						{
+							e.AddStateMachineExitTransition(sm, fromMachine);
+						}
+						else if (destination.Ref.Kind == AcNodeKind.StateMachine)
+						{
+							e.AddStateMachineTransition(sm, fromMachine, destination.Ref.AsStateMachine());
+						}
+						else
+						{
+							e.AddStateMachineTransition(sm, fromMachine, destination.Ref.AsState());
+						}
+						break;
+
+					case AcNodeKind.Any:
+						if (destination.Ref.Kind == AcNodeKind.StateMachine)
+						{
+							e.AddAnyStateTransition(sm, destination.Ref.AsStateMachine());
+						}
+						else
+						{
+							e.AddAnyStateTransition(sm, destination.Ref.AsState());
+						}
+						break;
+
+					case AcNodeKind.Entry:
+						if (destination.Ref.Kind == AcNodeKind.StateMachine)
+						{
+							e.AddEntryTransition(sm, destination.Ref.AsStateMachine());
+						}
+						else
+						{
+							e.AddEntryTransition(sm, destination.Ref.AsState());
+						}
+						break;
+				}
+			}
+		}
+
+		/// <summary>
+		/// 接続できる組み合わせかを判定し、両端のノードを返す。
+		/// 標準 Animator ウィンドウで作れる遷移だけを許す。
+		/// </summary>
+		private bool TryResolveConnection(
+			FXCPortRef from, FXCPortRef to, out AcGraphNode source, out AcGraphNode destination)
+		{
+			source = null;
+			destination = null;
+
+			if (!CanEdit || !from.IsValid || !to.IsValid)
+			{
+				return false;
+			}
+			if (!string.Equals(from.PortId, AcGraphPort.OutId, StringComparison.Ordinal)
+				|| !string.Equals(to.PortId, AcGraphPort.InId, StringComparison.Ordinal))
+			{
+				return false;
+			}
+			if (!TryGetNode(from.NodeId, out source) || !TryGetNode(to.NodeId, out destination))
+			{
+				return false;
+			}
+
+			// 出られる側 / 入れる側。
+			bool sourceOk = source.Ref.Kind == AcNodeKind.State
+				|| source.Ref.Kind == AcNodeKind.StateMachine
+				|| source.Ref.Kind == AcNodeKind.Any
+				|| source.Ref.Kind == AcNodeKind.Entry;
+			bool destinationOk = destination.Ref.Kind == AcNodeKind.State
+				|| destination.Ref.Kind == AcNodeKind.StateMachine
+				|| destination.Ref.Kind == AcNodeKind.Exit;
+			if (!sourceOk || !destinationOk)
+			{
+				return false;
+			}
+
+			// Any と Entry から Exit へは引けない（標準 Animator ウィンドウと同じ）。
+			if (destination.Ref.Kind == AcNodeKind.Exit
+				&& source.Ref.Kind != AcNodeKind.State
+				&& source.Ref.Kind != AcNodeKind.StateMachine)
+			{
+				return false;
+			}
+
+			// Entry から出られるのは1本だけ…ではないが、自分自身へは引けない。
+			if (source == destination && source.Ref.Kind != AcNodeKind.State)
+			{
+				return false;
+			}
+
+			return true;
 		}
 
 		public void DeleteNodes(IReadOnlyList<string> nodeIds)
 		{
+			AnimatorStateMachine sm = Current;
+			if (!CanEdit || nodeIds == null || nodeIds.Count == 0)
+			{
+				return;
+			}
+
+			// 特殊ノードは消せない。消せるものが無ければ Undo 段も作らない。
+			var states = new List<AnimatorState>();
+			var machines = new List<AnimatorStateMachine>();
+			for (int i = 0; i < nodeIds.Count; i++)
+			{
+				AcGraphNode node;
+				if (!TryGetNode(nodeIds[i], out node))
+				{
+					continue;
+				}
+				if (node.Ref.Kind == AcNodeKind.State)
+				{
+					states.Add(node.Ref.AsState());
+				}
+				else if (node.Ref.Kind == AcNodeKind.StateMachine)
+				{
+					machines.Add(node.Ref.AsStateMachine());
+				}
+			}
+			if (states.Count == 0 && machines.Count == 0)
+			{
+				return;
+			}
+
+			using (AcEdit e = AcEdit.Begin(Controller, "Delete"))
+			{
+				for (int i = 0; i < states.Count; i++)
+				{
+					e.RemoveState(sm, states[i]);
+				}
+				for (int i = 0; i < machines.Count; i++)
+				{
+					e.RemoveStateMachine(sm, machines[i]);
+				}
+			}
 		}
 
 		public void DeleteEdges(IReadOnlyList<string> edgeIds)
 		{
+			if (!CanEdit || edgeIds == null || edgeIds.Count == 0)
+			{
+				return;
+			}
+
+			// Entry → 既定ステートの線は Unity 側に遷移オブジェクトが無い暗黙の線なので、
+			// 消す対象にならない（既定ステートの変更は右クリックメニューから行う）。
+			var transitions = new List<AnimatorTransitionBase>();
+			for (int i = 0; i < edgeIds.Count; i++)
+			{
+				AnimatorTransitionBase transition;
+				if (TryGetTransition(edgeIds[i], out transition))
+				{
+					transitions.Add(transition);
+				}
+			}
+			if (transitions.Count == 0)
+			{
+				return;
+			}
+
+			using (AcEdit e = AcEdit.Begin(Controller, "Delete Transition"))
+			{
+				for (int i = 0; i < transitions.Count; i++)
+				{
+					e.RemoveTransition(transitions[i]);
+				}
+			}
 		}
 
 		public void PopulateContextMenu(GenericMenu menu, FXCGraphContext context)
 		{
+			AnimatorStateMachine sm = Current;
+			if (sm == null)
+			{
+				return;
+			}
+
+			if (!CanEdit)
+			{
+				menu.AddDisabledItem(new GUIContent(ReadOnlyReason ?? "編集できません"));
+				return;
+			}
+
+			AcGraphNode node;
+			if (context.NodeId != null && TryGetNode(context.NodeId, out node))
+			{
+				PopulateNodeMenu(menu, sm, node);
+				return;
+			}
+
+			AnimatorTransitionBase transition;
+			if (context.EdgeId != null && TryGetTransition(context.EdgeId, out transition))
+			{
+				AnimatorTransitionBase captured = transition;
+				menu.AddItem(new GUIContent("Delete Transition"), false, () =>
+				{
+					using (AcEdit e = AcEdit.Begin(Controller, "Delete Transition"))
+					{
+						e.RemoveTransition(captured);
+					}
+				});
+				return;
+			}
+
+			Vector2 at = FXCNodeView.SnapToGrid(context.GraphPosition);
+			menu.AddItem(new GUIContent("Create State"), false, () =>
+			{
+				using (AcEdit e = AcEdit.Begin(Controller, "Create State"))
+				{
+					e.AddState(sm, "New State", at);
+				}
+			});
+			menu.AddItem(new GUIContent("Create Sub-State Machine"), false, () =>
+			{
+				using (AcEdit e = AcEdit.Begin(Controller, "Create Sub-State Machine"))
+				{
+					e.AddStateMachine(sm, "New State Machine", at);
+				}
+			});
+		}
+
+		private void PopulateNodeMenu(GenericMenu menu, AnimatorStateMachine sm, AcGraphNode node)
+		{
+			if (node.Ref.Kind == AcNodeKind.State)
+			{
+				AnimatorState state = node.Ref.AsState();
+				if (node.IsDefault)
+				{
+					menu.AddDisabledItem(new GUIContent("Set as Default State"));
+				}
+				else
+				{
+					menu.AddItem(new GUIContent("Set as Default State"), false, () =>
+					{
+						using (AcEdit e = AcEdit.Begin(Controller, "Set Default State"))
+						{
+							e.SetDefaultState(sm, state);
+						}
+					});
+				}
+				menu.AddSeparator(string.Empty);
+				menu.AddItem(new GUIContent("Delete State"), false, () =>
+				{
+					using (AcEdit e = AcEdit.Begin(Controller, "Delete State"))
+					{
+						e.RemoveState(sm, state);
+					}
+				});
+				return;
+			}
+
+			if (node.Ref.Kind == AcNodeKind.StateMachine)
+			{
+				AnimatorStateMachine child = node.Ref.AsStateMachine();
+				menu.AddItem(new GUIContent("Open"), false, () => EnterStateMachine(child));
+				menu.AddSeparator(string.Empty);
+				menu.AddItem(new GUIContent("Delete Sub-State Machine"), false, () =>
+				{
+					using (AcEdit e = AcEdit.Begin(Controller, "Delete Sub-State Machine"))
+					{
+						e.RemoveStateMachine(sm, child);
+					}
+				});
+				return;
+			}
+
+			if (node.Ref.Kind == AcNodeKind.Parent)
+			{
+				menu.AddItem(new GUIContent("Go Up"), false, GoUp);
+			}
 		}
 
 		#endregion

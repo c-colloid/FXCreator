@@ -29,6 +29,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		private FXCGraphView _graph;
 		private LayerListView _layers;
+		private ElementInspector _inspector;
 		private VisualElement _breadcrumb;
 		private Label _status;
 
@@ -67,8 +68,17 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_layers.LayerSelected += OnLayerSelected;
 			split.Add(_layers);
 
+			// グラフ列と詳細パネルをもう一段の分割で並べる（§11-5 の入れ子検証）。
+			// 固定するのは右側（index 1）で、グラフ側が伸び縮みする。
+			var rightSplit = new TwoPaneSplitView(1, 260f, TwoPaneSplitViewOrientation.Horizontal);
+			rightSplit.style.flexGrow = 1;
+			split.Add(rightSplit);
+
 			var right = new VisualElement { style = { flexGrow = 1 } };
-			split.Add(right);
+			rightSplit.Add(right);
+
+			_inspector = new ElementInspector();
+			rightSplit.Add(_inspector);
 
 			_breadcrumb = new VisualElement
 			{
@@ -102,6 +112,10 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			};
 			right.Add(_status);
 
+			// 編集が確定すると AcGraphSource が自分で作り直して Changed を出す。
+			// グラフはそれをビューに反映するが、ステータスとパンくずはこちらの担当。
+			_source.Changed += UpdateChrome;
+
 			_graph.SetSource(_source);
 			_graph.RegisterCallback<GeometryChangedEvent>(OnGraphGeometryChanged);
 
@@ -120,6 +134,13 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				_watcher.Changed -= OnExternalChange;
 				_watcher.Dispose();
 				_watcher = null;
+			}
+			if (_source != null)
+			{
+				// AcEdit.AfterEdit は静的イベント。外さないとドメインリロードまで
+				// 死んだウィンドウのソースが購読し続ける。
+				_source.Dispose();
+				_source = null;
 			}
 		}
 
@@ -310,6 +331,9 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_layers.SetController(_controller, _source.LayerIndex);
 			RebuildBreadcrumb();
 			UpdateStatus();
+			// 対象は変えずに値だけ取り直す。作り直すと入力中のフィールドから
+			// フォーカスが飛ぶので、Undo や外部変更のあとでもここは値同期に留める。
+			_inspector.SyncValues();
 		}
 
 		private void RebuildBreadcrumb()
@@ -367,10 +391,15 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				return;
 			}
 
+			string mode = _source.CanEdit
+				? "右クリックで追加 · ポートからドラッグで遷移 · Delete で削除"
+				: (_source.ReadOnlyReason ?? "読み取り専用");
+
 			_status.text = string.Format(
-				"{0} nodes / {1} edges   ·   読み取り専用（編集は Phase 3）",
+				"{0} nodes / {1} edges   ·   {2}",
 				_source.Nodes.Count,
-				_source.Edges.Count);
+				_source.Edges.Count,
+				mode);
 		}
 
 		private void OnGraphGeometryChanged(GeometryChangedEvent evt)
@@ -432,6 +461,22 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		private void OnGraphSelectionChanged()
 		{
 			Object target = ResolveSelectedObject();
+
+			var state = target as AnimatorState;
+			var transition = target as AnimatorTransitionBase;
+			if (state != null)
+			{
+				_inspector.ShowState(_controller, state);
+			}
+			else if (transition != null)
+			{
+				_inspector.ShowTransition(_controller, transition);
+			}
+			else
+			{
+				_inspector.ShowNothing();
+			}
+
 			if (target != null)
 			{
 				Selection.activeObject = target;
