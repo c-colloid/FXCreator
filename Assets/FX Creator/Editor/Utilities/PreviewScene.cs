@@ -12,6 +12,9 @@ using System.IO;
 using VRC.SDK3.Avatars.Components;
 using UnityEngine.Animations;
 
+namespace colloid.FXCreator.Utility
+{
+
 public class PreviewScene : IDisposable
 {
 	public Scene Scene { get; private set; }
@@ -288,4 +291,5 @@ public class PreviewScene : IDisposable
 			RenderSettings.fogEndDistance = m_fogEndDistance;
 		}
 	}
+}
 }

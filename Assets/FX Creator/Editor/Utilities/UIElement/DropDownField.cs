@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 using UnityEditor;
 using UnityEditor.UIElements;
 
-namespace CustomUI
+namespace colloid.FXCreator.UI
 {
 	public class DropDownField : PopupField<string>
 {

@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+namespace colloid.FXCreator.Preview
+{
+
 public class PreviewControl : IDisposable
 {
 	public string name{ get; private set; }
@@ -112,4 +115,5 @@ public class PreviewControl : IDisposable
 		}
 		return false;
 	}
+}
 }

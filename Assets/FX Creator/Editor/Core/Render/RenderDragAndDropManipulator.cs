@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 using System;
-using CustomUI;
+using colloid.FXCreator.UI;
 
 namespace colloid.FXCreator.Utility
 {

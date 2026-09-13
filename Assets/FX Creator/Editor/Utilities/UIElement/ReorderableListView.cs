@@ -7,7 +7,7 @@ using System.Linq;
 using UnityEditor;
 using System.Reflection;
 
-namespace CustomUI
+namespace colloid.FXCreator.UI
 {
 internal class ReorderableListView : ListView
 {

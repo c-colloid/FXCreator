@@ -3,6 +3,11 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
+using colloid.FXCreator.Utility;
+using colloid.FXCreator.UI;
+
+namespace colloid.FXCreator.Legacy
+{
 
 public class AnimatorCreatorWindow : EditorWindow
 {
@@ -16,8 +21,7 @@ public class AnimatorCreatorWindow : EditorWindow
 	ObjectField m_objectField;
 	public AnimatorCreatorData AnimatorCreatorData { get { return (AnimatorCreatorData)m_objectField.value; } }
 
-	[MenuItem("Window/UI Toolkit/AnimatorCreatorWindow")]
-	[MenuItem("Tools/FXCreator/AnimatorCreater",priority = 1001)]
+	[MenuItem("Tools/FXCreator/Legacy/Animator Creator (Legacy)", priority = 1901)]
 	public static void ShowWindow()
     {
         AnimatorCreatorWindow wnd = GetWindow<AnimatorCreatorWindow>();
@@ -153,4 +157,5 @@ public class AnimatorCreatorWindow : EditorWindow
 	// 	};
 	// 	AnimatorCreatorData.edgeData_list.Add(edgeData);
 	// }
+}
 }

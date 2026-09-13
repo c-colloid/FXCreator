@@ -4,6 +4,9 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
 
+namespace colloid.FXCreator.Preview
+{
+
 public class PreviewRaycaster : BaseRaycaster
 {
 	PreviewControl _root;
@@ -59,4 +62,5 @@ public class PreviewRaycaster : BaseRaycaster
 			resultAppendList.Add(result);
 		}
 	}
+}
 }

@@ -2,6 +2,9 @@
 using UnityEngine.UIElements;
 using UnityEditor;
 
+namespace colloid.FXCreator.Legacy
+{
+
 public class AnimatorCreatorRootManipulator : Manipulator
 {
 	AnimatorCreatorWindow m_window;
@@ -112,4 +115,5 @@ public class AnimatorCreatorRootManipulator : Manipulator
 			new BackgroundPosition(BackgroundPositionKeyword.Top,
 			new Length(m_targetBG.style.backgroundPositionY.value.offset.value + mouseDelta.y));
 	}
+}
 }

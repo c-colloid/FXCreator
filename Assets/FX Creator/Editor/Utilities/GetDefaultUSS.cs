@@ -4,6 +4,9 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEditor;
 
+namespace colloid.FXCreator.Utility
+{
+
 public static class GetDefaultUSS
 {
 	private static StyleSheet defaultCommonDarkStyleSheet;
@@ -51,4 +54,5 @@ public static class GetDefaultUSS
 		defaultCommonDarkStyleSheet = (StyleSheet) darkField.GetValue(null);
 		defaultCommonLightStyleSheet = (StyleSheet) lightField.GetValue(null);
 	}
+}
 }

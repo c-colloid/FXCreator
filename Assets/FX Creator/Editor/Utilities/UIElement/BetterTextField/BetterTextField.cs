@@ -1,12 +1,11 @@
 ﻿using System;
 using JetBrains.Annotations;
-using Unity.Cloud.Collaborate.Assets;
 //using Unity.Cloud.Collaborate.UserInterface;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace CustomUI
+namespace colloid.FXCreator.UI
 {
     // Hopefully these features will eventually be in the default TextField eventually.
 	public class BetterTextField : TextField

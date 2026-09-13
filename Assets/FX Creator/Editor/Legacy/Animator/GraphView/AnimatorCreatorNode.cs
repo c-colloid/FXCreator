@@ -10,6 +10,9 @@ using UnityEditor.UIElements;
 using UnityEditor.SceneManagement;
 using VRC.SDK3.Avatars.Components;
 
+namespace colloid.FXCreator.Legacy
+{
+
 public class AnimatorCreatorNode : Node
 {
 	[SerializeField]
@@ -284,4 +287,5 @@ public class AnimatorCreatorNode : Node
 		this.style.height = currentHeight;
 		return current ? DisplayStyle.Flex : DisplayStyle.None;
 	}
+}
 }

@@ -1,4 +1,4 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
-    <CustomUI.ToggleButton text="Button" />
-    <CustomUI.ToggleinButton Enable Rich Text="true" Parse Escape Sequences="false" Display Tooltip When Elided="false" text="aaa" value="false" />
+    <colloid.FXCreator.UI.ToggleButton text="Button" />
+    <colloid.FXCreator.UI.ToggleinButton Enable Rich Text="true" Parse Escape Sequences="false" Display Tooltip When Elided="false" text="aaa" value="false" />
 </ui:UXML>

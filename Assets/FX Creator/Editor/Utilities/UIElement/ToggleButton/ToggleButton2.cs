@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace CustomUI
+namespace colloid.FXCreator.UI
 {
 	public class ToggleinButton : Toggle
 	{

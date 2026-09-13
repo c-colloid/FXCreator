@@ -5,18 +5,17 @@ using UnityEngine.UIElements;
 namespace colloid.FXCreator
 {
 	
-public class FXCAnimatoinContainer : EditorWindow
+public class FxcAnimationContainer : EditorWindow
 {
     [SerializeField]
     private VisualTreeAsset m_VisualTreeAsset = default;
 
-	[MenuItem("Tools/FXCreator/Debug/", priority = 1021)]
 	
-	[MenuItem("Window/UI Toolkit/FXCAnimatoinContainer"), MenuItem("Tools/FXCreator/Debug/FXCAnimationContainer", priority = 1021)]
+	[MenuItem("Tools/FXCreator/Debug/FXC Animation Container", priority = 1921)]
     public static void ShowExample()
     {
-        FXCAnimatoinContainer wnd = GetWindow<FXCAnimatoinContainer>();
-        wnd.titleContent = new GUIContent("FXCAnimatoinContainer");
+        FxcAnimationContainer wnd = GetWindow<FxcAnimationContainer>();
+        wnd.titleContent = new GUIContent("FXC Animation Container");
     }
 
     public void CreateGUI()

@@ -5,12 +5,15 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEditor;
 
+namespace colloid.FXCreator.Render
+{
+
 public class SelectObjectOutline : IDisposable
 {
 	public Material emissionMaterial;
 	public Material outlineMaterial;
 
-	private new Camera m_camera;
+	private Camera m_camera;
 	private CommandBuffer m_commandBuffer;
 	private Renderer m_targetRenderer = null;
 	
@@ -50,4 +53,5 @@ public class SelectObjectOutline : IDisposable
 		// アウトラインを抽出して合成
 		m_commandBuffer.Blit(id, BuiltinRenderTextureType.CameraTarget, outlineMaterial);
 	}
+}
 }

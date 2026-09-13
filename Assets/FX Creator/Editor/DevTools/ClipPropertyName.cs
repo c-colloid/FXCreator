@@ -1,8 +1,11 @@
 ﻿using UnityEngine;
 using UnityEditor;
 
+namespace colloid.FXCreator.DevTools
+{
+
 public class ClipPropertyName : EditorWindow {
-	[MenuItem("Window/Disp curve.propertyName")]
+	[MenuItem("Tools/FXCreator/Debug/Show Curve PropertyNames", priority = 1920)]
 	static void ShowWindow() {
 		EditorWindow.GetWindow<ClipPropertyName>();
 	}
@@ -20,4 +23,5 @@ public class ClipPropertyName : EditorWindow {
 	void OnGUI() {
 		GUILayout.Label("Please select an Animation Clip");
 	}
+}
 }

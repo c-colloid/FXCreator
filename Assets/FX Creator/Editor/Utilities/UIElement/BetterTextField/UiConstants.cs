@@ -1,6 +1,10 @@
-﻿using System;
+// Vendored from Unity Collaborate package UI code (originally declared in
+// namespace Unity.Cloud.Collaborate.Assets). Re-namespaced into
+// colloid.FXCreator.UI so FX Creator does not squat on a namespace it does not
+// own. Consumed by BetterTextField.cs.
+using System;
 
-namespace Unity.Cloud.Collaborate.Assets
+namespace colloid.FXCreator.UI
 {
     internal static class UiConstants
     {

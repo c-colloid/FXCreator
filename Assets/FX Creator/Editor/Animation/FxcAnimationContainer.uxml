@@ -1,4 +1,4 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/FX%20Creater/Editor/Animation/FXCAnimatoinContainer.uss?fileID=7433441132597879392&amp;guid=95a9d2613840b4b49935a01670c20d2e&amp;type=3#FXCAnimatoinContainer" />
+    <Style src="project://database/Assets/FX%20Creator/Editor/Animation/FxcAnimationContainer.uss?fileID=7433441132597879392&amp;guid=95a9d2613840b4b49935a01670c20d2e&amp;type=3#FxcAnimationContainer" />
     <ui:Label text="Hello World! With Style" class="custom-label" />
 </ui:UXML>

@@ -1,5 +1,5 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
-    <Style src="project://database/Assets/FX%20Creator/Editor/Animator/AnimatorCreatorWindow.uss?fileID=7433441132597879392&amp;guid=1f51efa23c4e3804aa098d4e7ad5041a&amp;type=3#AnimatorCreatorWindow" />
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/FX%20Creator/Editor/Legacy/Animator/AnimatorCreatorWindow.uss?fileID=7433441132597879392&amp;guid=1f51efa23c4e3804aa098d4e7ad5041a&amp;type=3#AnimatorCreatorWindow" />
     <ui:TwoPaneSplitView fixed-pane-initial-dimension="30" name="TwoPaneSplitView" style="padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0;">
         <ui:Box class="custom-Box" style="align-items: center;">
             <uie:Toolbar style="width: 100%; justify-content: space-between; flex-direction: row-reverse;">
@@ -12,9 +12,9 @@
                 <uie:ToolbarButton parse-escape-sequences="true" display-tooltip-when-elided="true" name="EnableTwoPanel" class="custom-ToolbarInActiveButton" style="width: 25px; display: none; justify-content: center; border-left-width: 0;" />
             </uie:Toolbar>
             <ui:VisualElement name="Background" class="custom-Background" style="flex-grow: 1; background-color: rgb(255, 255, 255);">
-                <Shadow shadow-scale="1.1" shadow-corner-radius="20" shadow-side="Inside" style="flex-grow: 1; overflow: hidden; color: rgb(11, 0, 255);">
+                <colloid.FXCreator.UI.Shadow shadow-scale="1.1" shadow-corner-radius="20" shadow-side="Inside" style="flex-grow: 1; overflow: hidden; color: rgb(11, 0, 255);">
                     <ui:VisualElement name="StateMachineContainer" style="flex-grow: 1; flex-shrink: 0; background-color: rgba(0, 0, 0, 0.22); display: none;" />
-                </Shadow>
+                </colloid.FXCreator.UI.Shadow>
             </ui:VisualElement>
             <uie:Toolbar />
         </ui:Box>

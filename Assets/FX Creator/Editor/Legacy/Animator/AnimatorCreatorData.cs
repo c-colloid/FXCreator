@@ -4,7 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor.Experimental.GraphView;
 
-[CreateAssetMenu(menuName = "FXCreator/AniamatorCreatorData")]
+namespace colloid.FXCreator.Legacy
+{
+
+[CreateAssetMenu(menuName = "FXCreator/Legacy/AnimatorCreatorData")]
 public class AnimatorCreatorData : ScriptableObject
 {
     public List<NodeData> nodeData_list;
@@ -27,4 +30,5 @@ public class EdgeData
     public string uid_outputPort;
     public string uid_inputNode;
     public string uid_inputPort;
+}
 }

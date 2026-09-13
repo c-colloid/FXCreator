@@ -25,7 +25,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-class Shadow : VisualElement
+namespace colloid.FXCreator.UI
+{
+
+public class Shadow : VisualElement
 {
 
     private Vertex[] k_Vertices;
@@ -308,4 +311,5 @@ class Shadow : VisualElement
         mwd.SetAllIndices(tris.ToArray());
 
     }
+}
 }

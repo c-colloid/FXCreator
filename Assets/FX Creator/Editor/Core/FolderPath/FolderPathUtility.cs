@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using CustomUI;
+using colloid.FXCreator.UI;
 using UnityEditor;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;

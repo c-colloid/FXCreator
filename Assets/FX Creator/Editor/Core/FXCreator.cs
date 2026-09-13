@@ -13,9 +13,10 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using CustomUI;
+using colloid.FXCreator.UI;
 using Hai.VisualExpressionsEditor.Scripts.Editor;
 using colloid.FXCreator.Utility;
+using colloid.FXCreator.Render;
 
 namespace colloid.FXCreator
 {
@@ -55,7 +56,6 @@ public class FXCreator : EditorWindow
 	List<SkinnedMeshRenderer> cloneAvatarSMRs = new List<SkinnedMeshRenderer>();
 #endregion
 #region CreateWindow
-	[MenuItem("Tools/FXCreator/", priority = 1000)]
 
 	[MenuItem("Tools/FXCreator/ShowPanel", priority = 1000)]
     public static void ShowWindow()

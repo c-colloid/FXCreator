@@ -3,6 +3,10 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor.Experimental.GraphView;
 using UnityEditor;
+using colloid.FXCreator.Utility;
+
+namespace colloid.FXCreator.Legacy
+{
 
 public class AnimatorCreatorGraph : GraphView
 {
@@ -57,4 +61,5 @@ public class AnimatorCreatorGraph : GraphView
 		}
 	    return compatiblePorts;
     }
+}
 }

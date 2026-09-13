@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 
+namespace colloid.FXCreator.Utility
+{
+
 public static class TryGetValueForList
 {
 	public static bool IsIndexOutOfRange<T>(this T[] array, int index)
@@ -39,4 +42,5 @@ public static class TryGetValueForList
 		value = list[index];
 		return true;
 	}
+}
 }
