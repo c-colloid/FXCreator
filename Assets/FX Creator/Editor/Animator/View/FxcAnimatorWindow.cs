@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using colloid.FXCreator.Graph;
 using colloid.FXCreator.Preview;
@@ -30,6 +31,9 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		private FXCGraphView _graph;
 		private LayerListView _layers;
+		private ParameterListView _parameters;
+		private Vrc.VrcParameterPanel _vrcParameters;
+		private Vrc.VrcMenuPanel _vrcMenu;
 		private ElementInspector _inspector;
 		private VisualElement _breadcrumb;
 		private Label _status;
@@ -66,9 +70,17 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			split.style.flexGrow = 1;
 			root.Add(split);
 
+			// 資料の左サイドバーはレイヤー一覧と VAR の2段（§6.1）。
+			var sidebar = new TwoPaneSplitView(0, 200f, TwoPaneSplitViewOrientation.Vertical);
+			sidebar.style.flexGrow = 1;
+			split.Add(sidebar);
+
 			_layers = new LayerListView();
 			_layers.LayerSelected += OnLayerSelected;
-			split.Add(_layers);
+			sidebar.Add(_layers);
+
+			_parameters = new ParameterListView();
+			sidebar.Add(_parameters);
 
 			// グラフ列と詳細パネルをもう一段の分割で並べる（§11-5 の入れ子検証）。
 			// 固定するのは右側（index 1）で、グラフ側が伸び縮みする。
@@ -76,8 +88,15 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			rightSplit.style.flexGrow = 1;
 			split.Add(rightSplit);
 
+			// 資料の下パネル（parameter / menu）をグラフの下に置く（§6.2 / §6.3）。
+			var center = new TwoPaneSplitView(1, 150f, TwoPaneSplitViewOrientation.Vertical);
+			center.style.flexGrow = 1;
+			rightSplit.Add(center);
+
 			var right = new VisualElement { style = { flexGrow = 1 } };
-			rightSplit.Add(right);
+			center.Add(right);
+
+			center.Add(BuildVrcPanels());
 
 			_inspector = new ElementInspector();
 			// 畳み込みの解除はサイドカーを触るのでソース側に任せる。
@@ -211,7 +230,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_avatar = avatar;
 			// プレビューはアバター1体につき1シーン。差し替わったら前のものは畳まれる。
 			_preview = AvatarPreviewService.ForAvatar(avatar);
-			if (_avatarField != null && _avatarField.value != (Object)avatar)
+			if (_avatarField != null && _avatarField.value != (UnityEngine.Object)avatar)
 			{
 				_avatarField.SetValueWithoutNotify(avatar);
 			}
@@ -267,7 +286,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		{
 			_controller = controller;
 
-			if (_controllerField != null && _controllerField.value != (Object)controller)
+			if (_controllerField != null && _controllerField.value != (UnityEngine.Object)controller)
 			{
 				_controllerField.SetValueWithoutNotify(controller);
 			}
@@ -347,9 +366,45 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_framePending = true;
 		}
 
+		/// <summary>下パネル。parameter / menu をタブで切り替える（§6.2 / §6.3）。</summary>
+		private VisualElement BuildVrcPanels()
+		{
+			var host = new VisualElement { style = { flexGrow = 1 } };
+
+			var tabs = new VisualElement
+			{
+				style = { flexDirection = FlexDirection.Row, flexShrink = 0 }
+			};
+			host.Add(tabs);
+
+			_vrcParameters = new Vrc.VrcParameterPanel();
+			_vrcMenu = new Vrc.VrcMenuPanel();
+			host.Add(_vrcParameters);
+			host.Add(_vrcMenu);
+
+			var parameterTab = new Button { text = "parameter" };
+			var menuTab = new Button { text = "menu" };
+			Action<bool> select = showParameters =>
+			{
+				_vrcParameters.style.display = showParameters ? DisplayStyle.Flex : DisplayStyle.None;
+				_vrcMenu.style.display = showParameters ? DisplayStyle.None : DisplayStyle.Flex;
+				parameterTab.style.unityFontStyleAndWeight = showParameters ? FontStyle.Bold : FontStyle.Normal;
+				menuTab.style.unityFontStyleAndWeight = showParameters ? FontStyle.Normal : FontStyle.Bold;
+			};
+			parameterTab.clicked += () => select(true);
+			menuTab.clicked += () => select(false);
+			tabs.Add(parameterTab);
+			tabs.Add(menuTab);
+			select(true);
+
+			return host;
+		}
+
 		private void UpdateChrome()
 		{
 			_layers.SetController(_controller, _source.LayerIndex);
+			_parameters.SetController(_controller, !_source.CanEdit);
+			UpdateVrcPanels();
 			RebuildBreadcrumb();
 			UpdateStatus();
 
@@ -371,6 +426,24 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			// 対象は変えずに値だけ取り直す。作り直すと入力中のフィールドから
 			// フォーカスが飛ぶので、Undo や外部変更のあとでもここは値同期に留める。
 			_inspector.SyncValues();
+		}
+
+		/// <summary>
+		/// 下パネルへアバターの Expression 資産を流す。
+		/// Phase 7 で <c>IFxTarget</c> が入ったら、その解決結果に置き換える。
+		/// </summary>
+		private void UpdateVrcPanels()
+		{
+#if VRC
+			VRCAvatarDescriptor descriptor = _avatar != null
+				? _avatar.GetComponent<VRCAvatarDescriptor>()
+				: null;
+			_vrcParameters.SetTarget(_controller, descriptor != null ? descriptor.expressionParameters : null);
+			_vrcMenu.SetMenu(descriptor != null ? descriptor.expressionsMenu : null);
+#else
+			_vrcParameters.SetTarget(_controller, null);
+			_vrcMenu.SetMenu(null);
+#endif
 		}
 
 		private void RebuildBreadcrumb()
@@ -516,7 +589,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				return;
 			}
 
-			Object target = ResolveSelectedObject();
+			UnityEngine.Object target = ResolveSelectedObject();
 
 			var state = target as AnimatorState;
 			var transition = target as AnimatorTransitionBase;
@@ -556,7 +629,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			return null;
 		}
 
-		private Object ResolveSelectedObject()
+		private UnityEngine.Object ResolveSelectedObject()
 		{
 			if (_source == null)
 			{

@@ -903,6 +903,27 @@ EditMode テスト 85/85。
 | ◎ | `VrcParameterPanel`（`VRCExpressionParameters` 編集 + コスト計算 + 差分表示） | 0.6 |
 | ○ | `VrcMenuPanel`（簡易リスト版） | 0.4 |
 
+#### 6.4 実施記録（2026-09-14）
+
+**§6.2 の宿題（既存パッケージとの共有可否）の結論: 共有しない。**
+`jp.colloid.vrc-expression-params-extension` の `VRCExpressionParametersEditor` 拡張は
+<b>アセット用のカスタム Inspector</b>で、パネル部品として持ち出せない。
+`VRCDefaultParameters`（VRChat 組み込みパラメータ一覧）は有用だが、
+別 VPM パッケージへの asmdef 参照は FX Creator の配布時に<b>そのパッケージを必須化</b>する。
+v0.1 は自己完結を優先した。パッケージ化（v0.2）の際に、両方が依存する小さな共有パッケージへ
+組み込み一覧を移すのが筋。
+
+| 判断 | 内容 | 理由 |
+|------|------|------|
+| 改名の追随先は条件式だけではない | State の speed / cycleOffset / mirror / timeParameter、BlendTree の blendParameter / blendParameterY、子の directBlendParameter、入れ子の BlendTree まで | 条件式だけ直すと「名前は変わったが挙動が壊れた」Controller ができる。テストで各参照先を個別に固定した |
+| 改名先が既存名と衝突したら連番を足す | `Taken` → `Taken 1` | 同名が2つあると、どちらを指しているのか決まらない Controller になる |
+| 未参照判定の走査範囲は<b>改名の走査と同じ</b>にする | `AcParameterUsage` と `AcEdit.RenameParameter` が同じ範囲を見る | 片方だけが知っている参照があると、「未参照」と言われて消したのに実は使われていた、という壊し方をする |
+| BlendTree はブレンド種別ごとに<b>効く軸だけ</b>数える | Direct は軸を使わず子の directBlendParameter だけ、Simple1D は X だけ | 効かない軸まで数えると、未設定の BlendTree が持つ既定値 `"Blend"` を使用中とみなす。実アバターで「宣言24 / 参照26」と数が合わずに気づいた（絞った後は 24/24 で一致） |
+| コスト上限は SDK の定数を参照 | `VRCExpressionParameters.MAX_PARAMETER_COST` | SDK 更新で上限が変わる。実アバターで「コスト 20 / 256」と表示 |
+| `VrcMenuPanel` は表示のみ | 編集 UI を持たない | R4 の「触らなければ壊さない」。円環 UI と D&D は v0.2〜v0.3 |
+
+EditMode テスト 96/96（`ParameterRenameTests` 11 本を追加）。
+
 ### Phase 7 — Targeting（両対応）（1.5日）
 
 | | タスク | 見積 |

@@ -766,5 +766,272 @@ namespace colloid.FXCreator.AnimatorGraph
 		}
 
 		#endregion
+
+		#region Parameters
+
+		public AnimatorControllerParameter AddParameter(string name, AnimatorControllerParameterType type)
+		{
+			return Guard(() =>
+			{
+				Record(_controller);
+				string unique = UniqueParameterName(name);
+				_controller.AddParameter(unique, type);
+				_report.ParametersChanged = true;
+
+				AnimatorControllerParameter[] parameters = _controller.parameters;
+				for (int i = 0; i < parameters.Length; i++)
+				{
+					if (string.Equals(parameters[i].name, unique, StringComparison.Ordinal))
+					{
+						return parameters[i];
+					}
+				}
+				return null;
+			});
+		}
+
+		public void RemoveParameter(string name)
+		{
+			Guard(() =>
+			{
+				Record(_controller);
+				AnimatorControllerParameter[] parameters = _controller.parameters;
+				for (int i = 0; i < parameters.Length; i++)
+				{
+					if (!string.Equals(parameters[i].name, name, StringComparison.Ordinal))
+					{
+						continue;
+					}
+					_controller.RemoveParameter(i);
+					_report.ParametersChanged = true;
+					return;
+				}
+			});
+		}
+
+		/// <summary>
+		/// パラメータの値を書き換える。<c>controller.parameters</c> は配列のコピーなので、
+		/// 要素を触っただけでは反映されない（落とし穴1）。配列ごと戻す。
+		/// </summary>
+		public void ModifyParameter(string name, Action<AnimatorControllerParameter> apply)
+		{
+			Guard(() =>
+			{
+				Record(_controller);
+				AnimatorControllerParameter[] parameters = _controller.parameters;
+				for (int i = 0; i < parameters.Length; i++)
+				{
+					if (!string.Equals(parameters[i].name, name, StringComparison.Ordinal))
+					{
+						continue;
+					}
+					apply(parameters[i]);
+					_controller.parameters = parameters;
+					_report.ParametersChanged = true;
+					return;
+				}
+			});
+		}
+
+		/// <summary>
+		/// パラメータを改名し、<b>Controller 内のすべての参照を追随させる</b>（§6.1）。
+		///
+		/// 追随先は条件式だけではない。取りこぼすと、名前だけ変わって挙動が壊れた
+		/// Controller ができあがる:
+		/// <list type="bullet">
+		/// <item>遷移の <c>AnimatorCondition.parameter</c>（State / Any / Entry / SubSM の全部）</item>
+		/// <item>State の speed / cycleOffset / mirror / timeParameter</item>
+		/// <item>BlendTree の blendParameter / blendParameterY と、子モーションの directBlendParameter</item>
+		/// </list>
+		/// </summary>
+		public void RenameParameter(string oldName, string newName)
+		{
+			Guard(() =>
+			{
+				if (string.IsNullOrEmpty(oldName) || string.IsNullOrEmpty(newName) || oldName == newName)
+				{
+					return;
+				}
+
+				string unique = UniqueParameterName(newName);
+
+				Record(_controller);
+				AnimatorControllerParameter[] parameters = _controller.parameters;
+				bool found = false;
+				for (int i = 0; i < parameters.Length; i++)
+				{
+					if (string.Equals(parameters[i].name, oldName, StringComparison.Ordinal))
+					{
+						parameters[i].name = unique;
+						found = true;
+						break;
+					}
+				}
+				if (!found)
+				{
+					return;
+				}
+				_controller.parameters = parameters;
+				_report.ParametersChanged = true;
+
+				AnimatorControllerLayer[] layers = _controller.layers;
+				for (int i = 0; i < layers.Length; i++)
+				{
+					RenameInStateMachine(layers[i].stateMachine, oldName, unique);
+				}
+			});
+		}
+
+		private void RenameInStateMachine(AnimatorStateMachine sm, string oldName, string newName)
+		{
+			if (sm == null)
+			{
+				return;
+			}
+
+			RenameInTransitions(sm, sm.anyStateTransitions, oldName, newName);
+			RenameInTransitions(sm, sm.entryTransitions, oldName, newName);
+
+			ChildAnimatorState[] states = sm.states;
+			for (int i = 0; i < states.Length; i++)
+			{
+				AnimatorState state = states[i].state;
+				if (state == null)
+				{
+					continue;
+				}
+
+				RenameInTransitions(state, state.transitions, oldName, newName);
+
+				if (state.speedParameter == oldName
+					|| state.cycleOffsetParameter == oldName
+					|| state.mirrorParameter == oldName
+					|| state.timeParameter == oldName)
+				{
+					Record(state);
+					if (state.speedParameter == oldName) state.speedParameter = newName;
+					if (state.cycleOffsetParameter == oldName) state.cycleOffsetParameter = newName;
+					if (state.mirrorParameter == oldName) state.mirrorParameter = newName;
+					if (state.timeParameter == oldName) state.timeParameter = newName;
+				}
+
+				RenameInMotion(state.motion, oldName, newName);
+			}
+
+			ChildAnimatorStateMachine[] children = sm.stateMachines;
+			for (int i = 0; i < children.Length; i++)
+			{
+				AnimatorStateMachine child = children[i].stateMachine;
+				if (child == null)
+				{
+					continue;
+				}
+				RenameInTransitions(sm, sm.GetStateMachineTransitions(child), oldName, newName);
+				RenameInStateMachine(child, oldName, newName);
+			}
+		}
+
+		private void RenameInTransitions(
+			UnityEngine.Object owner, AnimatorTransitionBase[] transitions, string oldName, string newName)
+		{
+			for (int i = 0; i < transitions.Length; i++)
+			{
+				AnimatorTransitionBase transition = transitions[i];
+				if (transition == null)
+				{
+					continue;
+				}
+
+				AnimatorCondition[] conditions = transition.conditions;
+				bool touched = false;
+				for (int c = 0; c < conditions.Length; c++)
+				{
+					if (!string.Equals(conditions[c].parameter, oldName, StringComparison.Ordinal))
+					{
+						continue;
+					}
+					conditions[c].parameter = newName;
+					touched = true;
+				}
+				if (touched)
+				{
+					// conditions も配列のコピー。戻さないと何も起きない。
+					Record(transition);
+					transition.conditions = conditions;
+				}
+			}
+		}
+
+		/// <summary>BlendTree は入れ子になりうるので再帰で辿る。</summary>
+		private void RenameInMotion(Motion motion, string oldName, string newName)
+		{
+			var tree = motion as BlendTree;
+			if (tree == null)
+			{
+				return;
+			}
+
+			if (tree.blendParameter == oldName || tree.blendParameterY == oldName)
+			{
+				Record(tree);
+				if (tree.blendParameter == oldName) tree.blendParameter = newName;
+				if (tree.blendParameterY == oldName) tree.blendParameterY = newName;
+			}
+
+			ChildMotion[] children = tree.children;
+			bool touched = false;
+			for (int i = 0; i < children.Length; i++)
+			{
+				if (string.Equals(children[i].directBlendParameter, oldName, StringComparison.Ordinal))
+				{
+					children[i].directBlendParameter = newName;
+					touched = true;
+				}
+				RenameInMotion(children[i].motion, oldName, newName);
+			}
+			if (touched)
+			{
+				Record(tree);
+				tree.children = children;
+			}
+		}
+
+		/// <summary>同名があると Unity 側が黙って番号を足すので、こちらで先に決めておく。</summary>
+		private string UniqueParameterName(string desired)
+		{
+			if (string.IsNullOrEmpty(desired))
+			{
+				desired = "New Parameter";
+			}
+
+			AnimatorControllerParameter[] parameters = _controller.parameters;
+			bool Taken(string candidate)
+			{
+				for (int i = 0; i < parameters.Length; i++)
+				{
+					if (string.Equals(parameters[i].name, candidate, StringComparison.Ordinal))
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+
+			if (!Taken(desired))
+			{
+				return desired;
+			}
+			for (int n = 1; n < 1000; n++)
+			{
+				string candidate = desired + " " + n;
+				if (!Taken(candidate))
+				{
+					return candidate;
+				}
+			}
+			return desired;
+		}
+
+		#endregion
 	}
 }
