@@ -53,6 +53,9 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			_scroll = new ScrollView(ScrollViewMode.Vertical);
 			_scroll.style.flexGrow = 1;
+			// 横スクロールを出さない。出ると行の右側（型・既定値・削除）が
+			// 画面外へ押し出されて、名前しか見えなくなる。
+			_scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
 			Add(_scroll);
 		}
 
@@ -104,7 +107,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			// 使われていないパラメータは消し忘れであることが多い。行の頭で知らせる。
 			var mark = new Label(referenced ? " " : "!");
-			mark.style.width = 10f;
+			mark.style.width = 9f;
+			mark.style.flexShrink = 0;
 			mark.style.unityTextAlign = TextAnchor.MiddleCenter;
 			mark.style.color = new Color(0.90f, 0.72f, 0.30f);
 			mark.tooltip = referenced ? null : "この Controller のどこからも参照されていません";
@@ -112,6 +116,10 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			var name = new TextField { value = originalName, isDelayed = true };
 			name.style.flexGrow = 1;
+			name.style.flexShrink = 1;
+			// TextField は既定で最小幅を持つ。0 にしておかないと行が縮めず、
+			// サイドバーの幅に収まらずに右側の要素がはみ出す。
+			name.style.minWidth = 0f;
 			name.style.marginRight = 2f;
 			name.SetEnabled(!_readOnly);
 			name.RegisterValueChangedCallback(evt =>
@@ -129,7 +137,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			row.Add(name);
 
 			var type = new Label(Abbreviate(parameter.type));
-			type.style.width = 26f;
+			type.style.width = 14f;
+			type.style.flexShrink = 0;
 			type.style.unityTextAlign = TextAnchor.MiddleCenter;
 			type.style.color = new Color(0.58f, 0.58f, 0.62f);
 			type.tooltip = parameter.type.ToString();
@@ -147,7 +156,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				text = "-"
 			};
-			remove.style.width = 18f;
+			remove.style.width = 16f;
+			remove.style.flexShrink = 0;
 			remove.SetEnabled(!_readOnly);
 			row.Add(remove);
 
@@ -165,7 +175,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				{
 					var field = new Toggle();
 					field.SetValueWithoutNotify(parameter.defaultBool);
-					field.style.width = 34f;
+					field.style.width = 30f;
+					field.style.flexShrink = 0;
 					field.SetEnabled(!_readOnly);
 					field.RegisterValueChangedCallback(evt => Apply(name, p => p.defaultBool = evt.newValue));
 					return field;
@@ -174,7 +185,8 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				{
 					var field = new IntegerField { isDelayed = true };
 					field.SetValueWithoutNotify(parameter.defaultInt);
-					field.style.width = 44f;
+					field.style.width = 38f;
+					field.style.flexShrink = 0;
 					field.SetEnabled(!_readOnly);
 					field.RegisterValueChangedCallback(evt => Apply(name, p => p.defaultInt = evt.newValue));
 					return field;
@@ -183,14 +195,15 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				{
 					var field = new FloatField { isDelayed = true };
 					field.SetValueWithoutNotify(parameter.defaultFloat);
-					field.style.width = 44f;
+					field.style.width = 38f;
+					field.style.flexShrink = 0;
 					field.SetEnabled(!_readOnly);
 					field.RegisterValueChangedCallback(evt => Apply(name, p => p.defaultFloat = evt.newValue));
 					return field;
 				}
 				default:
 				{
-					var spacer = new VisualElement { style = { width = 34f } };
+					var spacer = new VisualElement { style = { width = 30f, flexShrink = 0 } };
 					return spacer;
 				}
 			}

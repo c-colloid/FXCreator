@@ -82,7 +82,7 @@ namespace colloid.FXCreator.Graph
 					flexGrow = 1,
 					paddingLeft = 6f,
 					paddingRight = 4f,
-					paddingTop = 3f,
+					paddingTop = 1f,
 					overflow = Overflow.Hidden
 				}
 			};
@@ -90,10 +90,13 @@ namespace colloid.FXCreator.Graph
 
 			_title = new Label { pickingMode = PickingMode.Ignore };
 			_title.style.overflow = Overflow.Hidden;
+			// ノードは Controller の座標に合わせた高さしか無いので、行を詰める。
+			_title.style.fontSize = 10f;
+			_title.style.whiteSpace = WhiteSpace.NoWrap;
 			_body.Add(_title);
 
 			_subtitle = new Label { pickingMode = PickingMode.Ignore };
-			_subtitle.style.fontSize = 9f;
+			_subtitle.style.fontSize = 8f;
 			_subtitle.style.overflow = Overflow.Hidden;
 			_body.Add(_subtitle);
 

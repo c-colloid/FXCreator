@@ -108,8 +108,13 @@ namespace colloid.FXCreator.AnimatorGraph
 		/// <summary>
 		/// ノードの大きさ（グラフ単位）。Controller の position は左上隅を指すので、
 		/// 標準 Animator ウィンドウのノード幅に合わせておくと見た目も揃う。
+		///
+		/// 高さは<b>スナップ幅の倍数</b>にしてある（20 × 2）。半端な高さだと、
+		/// スナップして並べても縁がぴたりと合わない。
+		/// 実アバターのステート間隔は最小 40 なので、これより高くすると
+		/// 読み込んだだけで重なる（実測: 高さ54 のとき y=200 と y=240 が 14 重なっていた）。
 		/// </summary>
-		public static readonly Vector2 StateSize = new Vector2(200f, 54f);
+		public static readonly Vector2 StateSize = new Vector2(200f, 40f);
 
 		/// <summary>Any / Entry / Exit / (Up) の大きさ。丸いピル型で描く。</summary>
 		public static readonly Vector2 SpecialSize = new Vector2(200f, 40f);

@@ -20,7 +20,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 	public sealed class StateNodeView : FXCNodeView
 	{
 		/// <summary>ノード内に置くプレビューの一辺（グラフ単位）。</summary>
-		private const float PreviewSize = 46f;
+		private const float PreviewSize = 34f;
 
 		/// <summary>これより縮んだら描かない（§5.2-6）。読めない絵に GPU を使わない。</summary>
 		private const float MinZoomForPreview = 0.5f;
@@ -47,7 +47,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		public StateNodeView(FXCGraphView owner) : base(owner)
 		{
 			_info = new Label { pickingMode = PickingMode.Ignore };
-			_info.style.fontSize = 9f;
+			_info.style.fontSize = 8f;
 			_info.style.overflow = Overflow.Hidden;
 			Body.Add(_info);
 

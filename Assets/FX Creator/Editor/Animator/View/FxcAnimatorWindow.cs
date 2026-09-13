@@ -66,7 +66,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			VisualElement root = rootVisualElement;
 			root.Add(BuildToolbar());
 
-			var split = new TwoPaneSplitView(0, 210f, TwoPaneSplitViewOrientation.Horizontal);
+			var split = new TwoPaneSplitView(0, 250f, TwoPaneSplitViewOrientation.Horizontal);
 			split.style.flexGrow = 1;
 			root.Add(split);
 

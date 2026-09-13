@@ -32,6 +32,7 @@ namespace colloid.FXCreator.AnimatorGraph.Vrc
 
 			_scroll = new ScrollView(ScrollViewMode.Vertical);
 			_scroll.style.flexGrow = 1;
+			_scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
 			Add(_scroll);
 		}
 

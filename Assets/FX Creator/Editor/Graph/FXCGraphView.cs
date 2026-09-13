@@ -447,12 +447,13 @@ namespace colloid.FXCreator.Graph
 				return;
 			}
 
-			// 掴んだノードの着地点をスナップし、その差分を全選択ノードに同じだけ適用する。
-			int primaryIndex = _dragIds.IndexOf(_dragPrimary.NodeId);
-			Vector2 primaryStart = primaryIndex >= 0
-				? _dragStartPositions[primaryIndex]
-				: _dragPrimary.GraphPosition;
-			Vector2 applied = FXCNodeView.SnapToGrid(primaryStart + graphDelta) - primaryStart;
+			// スナップするのは<b>移動量</b>であって着地点ではない。
+			// 着地点を絶対座標でスナップすると、グリッドに乗っていない位置に置かれた
+			// ノード（標準 Animator ウィンドウで作った Controller には普通にある。
+			// 実例: y=150 のステートが 20 グリッドで 140/160 へ飛ぶ）が
+			// 掴んだだけでずれ、周りとの間隔が壊れる。
+			// 移動量をスナップすれば、元の並びを保ったまま動かせる。
+			Vector2 applied = FXCNodeView.SnapToGrid(graphDelta);
 
 			if (applied == _dragApplied)
 			{
