@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using colloid.FXCreator.Graph;
+using colloid.FXCreator.Preview;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.UIElements;
@@ -38,6 +39,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		private GameObject _avatar;
 		private AnimatorController _controller;
+		private AvatarPreviewService _preview;
 
 		/// <summary>初回レイアウト後に一度だけ Frame All する。</summary>
 		private bool _framePending;
@@ -145,6 +147,9 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				_source.Dispose();
 				_source = null;
 			}
+			// プレビューシーンと RenderTexture を畳む。放置すると GPU メモリが残る。
+			AvatarPreviewService.Shutdown();
+			_preview = null;
 		}
 
 		private void OnFocus()
@@ -190,9 +195,20 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		#region Target resolution
 
+		/// <summary>
+		/// ノード内プレビューの描画元（§5）。アバターが決まるまでは null で、
+		/// その間ノードはクリップ種別アイコンに退避する。
+		/// </summary>
+		private AvatarPreviewService PreviewService()
+		{
+			return _preview != null && _preview.IsUsable ? _preview : null;
+		}
+
 		private void SetAvatar(GameObject avatar)
 		{
 			_avatar = avatar;
+			// プレビューはアバター1体につき1シーン。差し替わったら前のものは畳まれる。
+			_preview = AvatarPreviewService.ForAvatar(avatar);
 			if (_avatarField != null && _avatarField.value != (Object)avatar)
 			{
 				_avatarField.SetValueWithoutNotify(avatar);
@@ -446,7 +462,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				case AcNodeKind.State:
 				case AcNodeKind.StateMachine:
-					return new StateNodeView(owner);
+					return new StateNodeView(owner) { ServiceProvider = PreviewService };
 				case AcNodeKind.Group:
 					return new GroupNodeView(owner);
 				default:
