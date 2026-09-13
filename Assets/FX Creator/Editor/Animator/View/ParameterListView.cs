@@ -88,6 +88,13 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			}
 		}
 
+		/// <summary>行の各列の幅。行ごとにばらつかせない。</summary>
+		private const float MarkColumn = 9f;
+		private const float TypeColumn = 14f;
+		private const float ValueColumn = 38f;
+		private const float RemoveColumn = 16f;
+		private const float RowHeight = 18f;
+
 		private VisualElement BuildRow(AnimatorControllerParameter parameter, bool referenced)
 		{
 			string originalName = parameter.name;
@@ -98,6 +105,9 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				{
 					flexDirection = FlexDirection.Row,
 					alignItems = Align.Center,
+					// 行の高さを決めておかないと、型ごとに違う編集部品の高さで
+					// 行ごとに間隔が変わり、並びがばらついて見える。
+					height = RowHeight,
 					paddingLeft = 4f,
 					paddingRight = 2f,
 					marginBottom = 1f,
@@ -107,7 +117,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			// 使われていないパラメータは消し忘れであることが多い。行の頭で知らせる。
 			var mark = new Label(referenced ? " " : "!");
-			mark.style.width = 9f;
+			mark.style.width = MarkColumn;
 			mark.style.flexShrink = 0;
 			mark.style.unityTextAlign = TextAnchor.MiddleCenter;
 			mark.style.color = new Color(0.90f, 0.72f, 0.30f);
@@ -115,6 +125,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			row.Add(mark);
 
 			var name = new TextField { value = originalName, isDelayed = true };
+			name.style.height = RowHeight - 2f;
 			name.style.flexGrow = 1;
 			name.style.flexShrink = 1;
 			// TextField は既定で最小幅を持つ。0 にしておかないと行が縮めず、
@@ -137,7 +148,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			row.Add(name);
 
 			var type = new Label(Abbreviate(parameter.type));
-			type.style.width = 14f;
+			type.style.width = TypeColumn;
 			type.style.flexShrink = 0;
 			type.style.unityTextAlign = TextAnchor.MiddleCenter;
 			type.style.color = new Color(0.58f, 0.58f, 0.62f);
@@ -156,7 +167,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			{
 				text = "-"
 			};
-			remove.style.width = 16f;
+			remove.style.width = RemoveColumn;
 			remove.style.flexShrink = 0;
 			remove.SetEnabled(!_readOnly);
 			row.Add(remove);
@@ -164,10 +175,26 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			return row;
 		}
 
-		/// <summary>既定値は型ごとに編集手段が違う。Trigger は値を持たない。</summary>
+		/// <summary>
+		/// 既定値は型ごとに編集手段が違う（Trigger は値を持たない）。
+		/// 型ごとに幅が違うと右隣の削除ボタンの位置が行ごとにずれるので、
+		/// <b>幅の決まった枠に入れて</b>列を揃える。
+		/// </summary>
 		private VisualElement BuildDefaultField(AnimatorControllerParameter parameter)
 		{
 			string name = parameter.name;
+
+			var slot = new VisualElement
+			{
+				style =
+				{
+					width = ValueColumn,
+					flexShrink = 0,
+					flexDirection = FlexDirection.Row,
+					justifyContent = Justify.Center,
+					alignItems = Align.Center
+				}
+			};
 
 			switch (parameter.type)
 			{
@@ -175,38 +202,42 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				{
 					var field = new Toggle();
 					field.SetValueWithoutNotify(parameter.defaultBool);
-					field.style.width = 30f;
-					field.style.flexShrink = 0;
+					field.style.marginLeft = 0f;
+					field.style.marginRight = 0f;
 					field.SetEnabled(!_readOnly);
 					field.RegisterValueChangedCallback(evt => Apply(name, p => p.defaultBool = evt.newValue));
-					return field;
+					slot.Add(field);
+					break;
 				}
 				case AnimatorControllerParameterType.Int:
 				{
 					var field = new IntegerField { isDelayed = true };
 					field.SetValueWithoutNotify(parameter.defaultInt);
-					field.style.width = 38f;
-					field.style.flexShrink = 0;
+					field.style.flexGrow = 1;
+					field.style.minWidth = 0f;
+					field.style.marginLeft = 0f;
+					field.style.marginRight = 0f;
 					field.SetEnabled(!_readOnly);
 					field.RegisterValueChangedCallback(evt => Apply(name, p => p.defaultInt = evt.newValue));
-					return field;
+					slot.Add(field);
+					break;
 				}
 				case AnimatorControllerParameterType.Float:
 				{
 					var field = new FloatField { isDelayed = true };
 					field.SetValueWithoutNotify(parameter.defaultFloat);
-					field.style.width = 38f;
-					field.style.flexShrink = 0;
+					field.style.flexGrow = 1;
+					field.style.minWidth = 0f;
+					field.style.marginLeft = 0f;
+					field.style.marginRight = 0f;
 					field.SetEnabled(!_readOnly);
 					field.RegisterValueChangedCallback(evt => Apply(name, p => p.defaultFloat = evt.newValue));
-					return field;
-				}
-				default:
-				{
-					var spacer = new VisualElement { style = { width = 30f, flexShrink = 0 } };
-					return spacer;
+					slot.Add(field);
+					break;
 				}
 			}
+
+			return slot;
 		}
 
 		private void Apply(string name, Action<AnimatorControllerParameter> change)

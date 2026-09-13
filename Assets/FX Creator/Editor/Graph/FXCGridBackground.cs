@@ -13,10 +13,21 @@ namespace colloid.FXCreator.Graph
 	/// </summary>
 	public sealed class FXCGridBackground : VisualElement
 	{
-		/// <summary>細線の間隔（グラフ単位）。ノードのスナップ幅と揃えている。</summary>
-		public const float MinorSpacing = 20f;
+		/// <summary>
+		/// 細線の間隔（グラフ単位）。ノードのスナップ幅と揃えている。
+		///
+		/// 10 なのは、標準 Animator ウィンドウで作られたステートの座標が
+		/// 10 の倍数に乗っているため。実測（`pon_vrchat_fx`）:
+		/// y = 0, 100, 150, 200, 240, 300, 350, 400, 460。
+		/// 20 にすると 150 と 350 が線の間に落ち、読み込んだ時点で
+		/// 「グリッドに沿っていない」見た目になる。
+		/// </summary>
+		public const float MinorSpacing = 10f;
 
-		/// <summary>太線は細線の何本ごとか。</summary>
+		/// <summary>
+		/// 太線は細線の何本ごとか。10 × 5 = 50 は、実際のステートの縦間隔
+		/// （上の実測で最も多い値）と一致する。太線がステートの行に重なる。
+		/// </summary>
 		public const int MajorEvery = 5;
 
 		private const float MinPixelSpacing = 6f;
