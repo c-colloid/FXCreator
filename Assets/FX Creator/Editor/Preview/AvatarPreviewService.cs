@@ -144,6 +144,17 @@ namespace colloid.FXCreator.Preview
 			}
 			_animator.enabled = false;
 
+			// プレビューシーンは通常のループで更新されないので、ボーンを動かしても
+			// SkinnedMeshRenderer がスキニング行列を作り直さない。Camera.Render() は
+			// そのときのスキニング結果を描くだけなので、これが無いと
+			// <b>どのクリップを差しても常にバインドポーズが描かれる</b>。
+			// （頭を55度回しても差分0画素、という形で実測した）
+			SkinnedMeshRenderer[] skins = _instance.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+			for (int i = 0; i < skins.Length; i++)
+			{
+				skins[i].forceMatrixRecalculationPerRender = true;
+			}
+
 			var cameraGo = new GameObject("FXC Preview Camera", typeof(Camera))
 			{
 				hideFlags = HideFlags.HideAndDontSave
@@ -378,17 +389,24 @@ namespace colloid.FXCreator.Preview
 				return;
 			}
 
-			if (_playingOwner != owner)
+			bool alreadyPlaying = _playingOwner == owner && _playingClip == clip;
+			if (!alreadyPlaying)
 			{
-				ReleasePlayingTexture();
+				if (_playingOwner != owner)
+				{
+					ReleasePlayingTexture();
+				}
 				_playingTime = 0f;
+				// 時計は「再生を始めた瞬間」だけ合わせる。呼ばれるたびに合わせ直すと、
+				// このメソッドを毎フレーム呼ぶ経路（ビューポート更新など）で
+				// 差分が常に 0 になり、再生が止まって見える。
+				_lastTick = EditorApplication.timeSinceStartup;
 			}
 
 			_playingOwner = owner;
 			_playingClip = clip;
 			_playingFraming = framing;
 			_playingOnFrame = onFrame;
-			_lastTick = EditorApplication.timeSinceStartup;
 
 			int width = Mathf.Max(8, size.x);
 			int height = Mathf.Max(8, size.y);

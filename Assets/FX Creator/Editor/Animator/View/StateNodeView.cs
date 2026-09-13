@@ -190,6 +190,11 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_preview.image = texture;
 			_preview.style.display = DisplayStyle.Flex;
 			_fallback.style.display = DisplayStyle.None;
+
+			// 再生中は同じ RenderTexture の中身だけが変わる。Image.image の setter は
+			// 参照が同じだと何もしない（＝再描画されない）ので、ここで明示的に汚す。
+			// これが無いと、update は回っているのに絵が止まって見える。
+			_preview.MarkDirtyRepaint();
 		}
 
 		private void CancelPreview()
