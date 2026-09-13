@@ -11,6 +11,11 @@ namespace colloid.FXCreator.Graph
 	///
 	/// スパイク §3.3.1 で <c>style.left/top</c> と <c>transform.position</c> に
 	/// 有意差がないことを確認したので、二段構えにせず style を単一の真実として使う。
+	///
+	/// 構築（コンストラクタ）と内容の反映（<see cref="Bind"/>）を分けてある。
+	/// 派生クラスが自分の要素を作り終えてから Bind が呼ばれるので、
+	/// 「基底のコンストラクタから仮想メソッド経由で未初期化のフィールドを触る」
+	/// という事故が起きない。生成は <see cref="FXCGraphView.NodeViewFactory"/> 経由。
 	/// </summary>
 	public class FXCNodeView : VisualElement
 	{
@@ -30,9 +35,20 @@ namespace colloid.FXCreator.Graph
 
 		public Rect GraphRect => new Rect(GraphPosition, GraphSize);
 
+		/// <summary>左端のアクセント帯。派生クラスが隠したり作り替えたりしてよい。</summary>
+		protected VisualElement Accent => _accent;
+
+		/// <summary>タイトルと副題を載せている縦並びの箱。派生クラスはここに行を足す。</summary>
+		protected VisualElement Body => _body;
+
+		protected Label TitleLabel => _title;
+
+		protected Label SubtitleLabel => _subtitle;
+
 		private readonly FXCGraphView _owner;
 		private readonly List<FXCPortView> _ports = new List<FXCPortView>();
 		private readonly VisualElement _accent;
+		private readonly VisualElement _body;
 		private readonly Label _title;
 		private readonly Label _subtitle;
 
@@ -41,7 +57,7 @@ namespace colloid.FXCreator.Graph
 		private int _dragPointerId = -1;
 		private Vector2 _dragStartLocalInGraphView;
 
-		public FXCNodeView(FXCGraphView owner, IFXCGraphNode node)
+		public FXCNodeView(FXCGraphView owner)
 		{
 			_owner = owner;
 
@@ -58,7 +74,7 @@ namespace colloid.FXCreator.Graph
 			};
 			Add(_accent);
 
-			var body = new VisualElement
+			_body = new VisualElement
 			{
 				pickingMode = PickingMode.Ignore,
 				style =
@@ -70,28 +86,28 @@ namespace colloid.FXCreator.Graph
 					overflow = Overflow.Hidden
 				}
 			};
-			Add(body);
+			Add(_body);
 
 			_title = new Label { pickingMode = PickingMode.Ignore };
 			_title.style.overflow = Overflow.Hidden;
-			body.Add(_title);
+			_body.Add(_title);
 
 			_subtitle = new Label { pickingMode = PickingMode.Ignore };
 			_subtitle.style.fontSize = 9f;
 			_subtitle.style.overflow = Overflow.Hidden;
-			body.Add(_subtitle);
+			_body.Add(_subtitle);
 
 			RegisterCallback<PointerDownEvent>(OnPointerDown);
 			RegisterCallback<PointerMoveEvent>(OnPointerMove);
 			RegisterCallback<PointerUpEvent>(OnPointerUp);
 			RegisterCallback<PointerCaptureOutEvent>(OnPointerCaptureOut);
-
-			Bind(node);
-			ApplySelectionStyle();
 		}
 
-		/// <summary>モデルの内容をビューに流し込む（再構築せず使い回すため）。</summary>
-		public void Bind(IFXCGraphNode node)
+		/// <summary>
+		/// モデルの内容をビューに流し込む（再構築せず使い回すため）。
+		/// 派生クラスは base を呼んでから自分の行を更新する。
+		/// </summary>
+		public virtual void Bind(IFXCGraphNode node)
 		{
 			NodeId = node.Id;
 			_title.text = node.Title ?? string.Empty;
@@ -105,6 +121,7 @@ namespace colloid.FXCreator.Graph
 
 			RebuildPorts(node.Ports);
 			SetGraphRect(node.GraphRect);
+			ApplySelectionStyle();
 		}
 
 		public void SetGraphRect(Rect graphRect)
@@ -267,7 +284,7 @@ namespace colloid.FXCreator.Graph
 
 		#region Style
 
-		private void ApplySelectionStyle()
+		protected virtual void ApplySelectionStyle()
 		{
 			bool pro = EditorGUIUtility.isProSkin;
 			style.backgroundColor = pro
@@ -283,7 +300,7 @@ namespace colloid.FXCreator.Graph
 			SetBorderWidth(_selected ? 2f : 1f);
 		}
 
-		private void SetBorderRadius(float r)
+		protected void SetBorderRadius(float r)
 		{
 			style.borderTopLeftRadius = r;
 			style.borderTopRightRadius = r;
@@ -291,7 +308,7 @@ namespace colloid.FXCreator.Graph
 			style.borderBottomRightRadius = r;
 		}
 
-		private void SetBorderWidth(float w)
+		protected void SetBorderWidth(float w)
 		{
 			style.borderLeftWidth = w;
 			style.borderRightWidth = w;
@@ -299,7 +316,7 @@ namespace colloid.FXCreator.Graph
 			style.borderBottomWidth = w;
 		}
 
-		private void SetBorderColor(Color c)
+		protected void SetBorderColor(Color c)
 		{
 			style.borderLeftColor = c;
 			style.borderRightColor = c;
@@ -321,6 +338,15 @@ namespace colloid.FXCreator.Graph
 
 			bool additive = evt.ctrlKey || evt.commandKey || evt.shiftKey;
 			_owner.OnNodePressed(this, additive);
+
+			// ダブルクリックは「開く」操作。ドラッグには入らない
+			// （2打目の押下でノードを掴むと、勢いで数ピクセル動いてしまう）。
+			if (evt.clickCount >= 2)
+			{
+				_owner.OnNodeActivated(this);
+				evt.StopPropagation();
+				return;
+			}
 
 			if (!_owner.BeginNodeDrag(this))
 			{

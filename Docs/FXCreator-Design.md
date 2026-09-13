@@ -613,6 +613,39 @@ UI そのものは自動テストせず、`uloop-screenshot` / `uloop-run-tests`
 
 **ゲート**: 実アバターの FX Controller を開いて、標準 Animator ウィンドウと同じ構造・同じ配置で表示される。
 
+#### 2.1 実施記録（2026-09-14）
+
+計画どおり実施。加えて `FxcAnimatorWindow` を新設した（ゲートを確認するには器が要るため）。
+以下は計画に書いていなかった追加判断。
+
+| 判断 | 内容 | 理由 |
+|------|------|------|
+| **名前空間を `colloid.FXCreator.Animator` にしない** | Binding/Sync は `colloid.FXCreator.AnimatorGraph`、View は `colloid.FXCreator.AnimatorGraph.View`。フォルダ名は設計どおり `Animator/` のまま | `colloid.FXCreator.Animator` は `colloid.FXCreator` 配下<b>全体</b>で型名 `Animator`（= `UnityEngine.Animator`）を覆い隠す。実際に Legacy の `Animator m_target;` が CS0118 で壊れた。Phase 3 以降も `Animator` 型は頻出するので、呼び出し側を直すのではなく名前空間の方を避けた |
+| ノードビューの生成を `FXCGraphView.NodeViewFactory` に外出し | `Func<FXCGraphView, IFXCGraphNode, FXCNodeView>`。未設定なら素の `FXCNodeView` | `Graph/` が Animator を知らない（§2.2）まま State と Entry/Exit/Any で別の見た目を出す唯一の接点。`StateNodeView` / `SpecialNodeView` はこれ経由で刺さる |
+| `FXCNodeView` を二段階初期化に変更 | コンストラクタは `(FXCGraphView owner)` だけを取り、内容の反映は `virtual Bind(node)` が担う。`Bind` は生成直後にも使い回し時にも必ず外から呼ばれる | 旧実装はコンストラクタから `Bind` を呼んでいた。仮想化すると派生クラスのフィールドが初期化される前に `Bind` が走る典型的な事故になる |
+| ダブルクリックを `FXCGraphView.NodeActivated` として追加 | `PointerDownEvent.clickCount >= 2` でドラッグに入らずイベントを出す | サブステートマシンへ潜る / `(Up)` で戻るのに必要。2打目の押下でノードを掴むと勢いで数ピクセル動く |
+| サブステートマシンへのドリルダウンとパンくずを Phase 2 に含めた | `AcGraphSource.Path` / `EnterStateMachine` / `GoToDepth`、`(Up)` ノード | ゲートが「標準 Animator ウィンドウと同じ構造」なので、サブステートマシンを展開できないと比較できない |
+| 遷移先の解決を「代表ノードへ寄せる」規則にした | 奥のサブステートマシン内が行き先ならそのサブステートマシンのノードへ、表示中ステートマシンの外なら `(Up)` へ。解決できなければエッジを描かない | 標準 Animator ウィンドウと同じ見え方。`_representativeNodeId`（配下の全 State/SM → 直接の子ノードID）で O(1) に引く |
+| グラフの選択を `Selection.activeObject` へ流す | 単一ノード選択なら `AnimatorState` / `AnimatorStateMachine`、単一エッジ選択なら `AnimatorTransitionBase` | State も Transition も Controller のサブアセットなので、これだけで標準 Inspector が中身を出す。読み取り専用の Phase 2 でも値を確認でき、R4 の「表示のみ・素通し」に合う |
+| `LayerListView.Row` は `Clickable` マニピュレータを使う | 生の `PointerDownEvent` から変更 | 標準のクリック挙動（押下位置から外れて離したらキャンセル）が付く。加えて `Clickable` を持つ要素だけが UI 自動化から叩けるので、以降のフェーズの動作確認が楽になる |
+| `FXCGraphDemoWindow` を削除しない | Phase 1 のコメントは「Phase 2 で削除」だったが残す | §3.3.1 のとおり性能計測（`Run sweep`）の置き場がここに移っている。Phase 5 でプレビューを足すと再び必要になる |
+
+**ノードの大きさ**: `StateSize = (200, 54)` / `SpecialSize = (200, 40)`。Controller の
+`position` は左上隅を指すものとして扱い、そのままグラフ座標に使う（§4.1）。
+
+**スクリプトゲートの回避**: `.cs` は `UapStaging/` 経由でしか書けず、ゲートは
+「ステージしたファイルを既存の `FXCreator.dll` を参照して単独コンパイル」する。
+既存クラスを書き換えると、staged 版と DLL 版の同名型がシグネチャ境界でぶつかって
+偽の CS1503 が出る（`FXCEdgeLayer(FXCGraphView)` など）。
+**対処は「その境界を含むフォルダをまとめてステージする」**こと。今回は `Graph/` 8ファイルを
+丸ごと置いたら通った。1ファイルだけ直そうとすると必ず詰まる。
+
+**ゲート確認（実アバター `pon_0.0.0` / `pon_vrchat_fx`、20レイヤー）**:
+アバターを選んでウィンドウを開くと FX レイヤーが自動解決され、レイヤー一覧・
+ノードグラフ（Any/Entry/Exit のピル、既定ステートのオレンジ、Motion名・Speed・WD）が
+標準 Animator ウィンドウと同じ配置で出る。EditMode テスト 30/30 パス
+（`AcGraphSourceTests` 15 + `FXCGraphViewportTests` 10 + `Phase0LayoutTests` 5）。
+
 ### Phase 3 — 編集（書き）＋ Undo（2.5日）
 
 | | タスク | 見積 |

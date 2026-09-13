@@ -48,6 +48,17 @@ namespace colloid.FXCreator.Graph
 		/// <summary>パンまたはズームでビューポートが変化したときに発火する。</summary>
 		public event Action ViewportChanged;
 
+		/// <summary>ノードがダブルクリックされた（引数はノードID）。サブステートマシンへ潜るのに使う。</summary>
+		public event Action<string> NodeActivated;
+
+		/// <summary>
+		/// ノードビューの生成をドメイン側に委ねるフック。未設定、または null を返した
+		/// 場合は素の <see cref="FXCNodeView"/> を使う。
+		/// <c>Graph/</c> が Animator を知らないまま、State と Entry/Exit/Any で
+		/// 別の見た目を出すための唯一の接点（§2.2 の依存方向を保つ）。
+		/// </summary>
+		public Func<FXCGraphView, IFXCGraphNode, FXCNodeView> NodeViewFactory { get; set; }
+
 		private readonly FXCGridBackground _grid;
 		private readonly FXCEdgeLayer _edgeLayer;
 		private readonly VisualElement _marquee;
@@ -186,16 +197,16 @@ namespace colloid.FXCreator.Graph
 				live.Add(node.Id);
 
 				FXCNodeView view;
-				if (_nodeViews.TryGetValue(node.Id, out view))
+				if (!_nodeViews.TryGetValue(node.Id, out view))
 				{
-					view.Bind(node);
-				}
-				else
-				{
-					view = new FXCNodeView(this, node);
+					view = CreateNodeView(node);
 					_nodeViews.Add(node.Id, view);
 					ContentLayer.Add(view);
 				}
+				// 生成直後も使い回しも同じ経路で流し込む。ビューの構築（コンストラクタ）と
+				// 内容の反映（Bind）を分けているので、派生クラスのフィールドが
+				// 初期化される前に Bind が走ることがない。
+				view.Bind(node);
 			}
 
 			var stale = new List<string>();
@@ -227,6 +238,12 @@ namespace colloid.FXCreator.Graph
 
 			ApplySelectionToViews();
 			ApplyCulling();
+		}
+
+		private FXCNodeView CreateNodeView(IFXCGraphNode node)
+		{
+			FXCNodeView view = NodeViewFactory != null ? NodeViewFactory(this, node) : null;
+			return view ?? new FXCNodeView(this);
 		}
 
 		public FXCNodeView FindNodeView(string nodeId)
@@ -375,6 +392,12 @@ namespace colloid.FXCreator.Graph
 			{
 				Selection.SelectOnlyNode(node.NodeId);
 			}
+		}
+
+		/// <summary>ノードのダブルクリック（<see cref="FXCNodeView"/> から呼ばれる）。</summary>
+		internal void OnNodeActivated(FXCNodeView node)
+		{
+			NodeActivated?.Invoke(node.NodeId);
 		}
 
 		#endregion
