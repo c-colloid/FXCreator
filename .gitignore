@@ -12,8 +12,8 @@
 #/[Aa]ssets/
 
 # Asset meta data should only be ignored when the corresponding asset is also ignored
- !/[Aa]ssets/**/*.meta
- !/[Aa]ssets/FxCreater
+!/[Aa]ssets/**/*.meta
+!/[Aa]ssets/FxCreater
 
 /[Aa]ssets/Plugins/Editor/Scriptinspector*
 /[Aa]ssets/Afro-da's AVATARS*
@@ -92,8 +92,16 @@ Assets/Packages/CSharpGenerator.meta
 Assets/ColorScript.meta
 /Assets/Chigiri
 /Assets/Hai
-/Assets/Hai
 /Assets/Oculus
 /Assets/XR
 /[Pp]rojectSettings/
 Assets/Chigiri.meta
+/.claude
+/.uloop
+/UserSettings
+
+# --- ツールが生成する作業ファイル ---
+# スクリプトゲート用のステージング置き場（Assets/ の外で検証してから移す）
+/UapStaging/
+# Agent Panel がマニフェスト書き換え前に取るバックアップ
+*.uap-backup
