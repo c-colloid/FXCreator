@@ -25,8 +25,45 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		/// <summary>これより縮んだら描かない（§5.2-6）。読めない絵に GPU を使わない。</summary>
 		private const float MinZoomForPreview = 0.5f;
 
-		/// <summary>プレビューの解像度。ノードの表示サイズより少し大きめに焼く。</summary>
-		private static readonly Vector2Int RenderSize = new Vector2Int(96, 96);
+		/// <summary>
+		/// 静止サムネイルの解像度の段。<b>キャッシュに載る</b>ので上限は控えめにする
+		/// （LRU 64 枚 × 192px ≒ 9MB。320px まで許すと 26MB になる）。
+		/// </summary>
+		private static readonly int[] StillSteps = { 96, 192 };
+
+		/// <summary>
+		/// 再生中のノードの解像度の段。再生は<b>選択中の1ノードだけ</b>で、
+		/// しかもキャッシュを通さない専用テクスチャ1枚なので、静止より上げてよい。
+		/// アニメーションを見たくて拡大するのだから、ここが効く。
+		/// </summary>
+		private static readonly int[] PlayingSteps = { 96, 192, 320 };
+
+		/// <summary>
+		/// 画面上の大きさに合わせた焼き込み解像度。
+		///
+		/// <b>連続値にしてはいけない。</b>静止プレビューのキャッシュキーには
+		/// サイズが入っているので、ホイールを回すたびに別のキーになって
+		/// LRU が回り続ける。再生テクスチャもサイズが変わるたびに作り直しになる。
+		/// 段で持って、跨いだときだけ変える。
+		/// </summary>
+		private Vector2Int RenderSizeFor(bool playing)
+		{
+			float onScreen = PreviewSize * Owner.Viewport.Zoom;
+			// 少し多めに焼く。等倍ちょうどだと縮小フィルタで甘くなる。
+			float wanted = onScreen * 1.25f;
+
+			int[] steps = playing ? PlayingSteps : StillSteps;
+			int chosen = steps[steps.Length - 1];
+			for (int i = 0; i < steps.Length; i++)
+			{
+				if (steps[i] >= wanted)
+				{
+					chosen = steps[i];
+					break;
+				}
+			}
+			return new Vector2Int(chosen, chosen);
+		}
 
 		/// <summary>要求先を差し込むための口。ウィンドウがノード生成時に渡す。</summary>
 		public Func<AvatarPreviewService> ServiceProvider;
@@ -153,7 +190,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			// 再生フレームはキャッシュに入らないので、静止プレビューを押し出さない。
 			if (Selected && _clip.length > 0f)
 			{
-				service.StartPlaying(this, _clip, RenderSize, framing, OnRendered);
+				service.StartPlaying(this, _clip, RenderSizeFor(true), framing, OnRendered);
 				return;
 			}
 			service.StopPlaying(this);
@@ -165,7 +202,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				Owner = this,
 				Clip = _clip,
 				Time = 0f,
-				Size = RenderSize,
+				Size = RenderSizeFor(false),
 				Focus = framing.Focus,
 				Fov = framing.Fov,
 				OnRendered = OnRendered

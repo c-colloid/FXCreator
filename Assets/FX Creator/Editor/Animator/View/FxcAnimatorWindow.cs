@@ -2,27 +2,21 @@ using System;
 using System.Collections.Generic;
 using colloid.FXCreator.Graph;
 using colloid.FXCreator.Preview;
+using colloid.FXCreator.Targeting;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
-#if VRC
-using VRC.SDK3.Avatars.Components;
-#endif
 
 namespace colloid.FXCreator.AnimatorGraph.View
 {
 	/// <summary>
 	/// FX Creator の Animator エディタ（Docs/FXCreator-Design.md ⑤ / v0.1 本体）。
 	///
-	/// Phase 2 の到達点は<b>読み専用グラフ</b>。アバターか AnimatorController を
-	/// 指定すると、レイヤーを選んでノードグラフとして眺められる。
-	/// 編集（Phase 3）・toggle/switch 畳み込み（Phase 4）・プレビュー（Phase 5）は未実装。
-	///
-	/// ターゲットの解決はここに素朴に持っている。Direct / NDMF-MA の切替
-	/// （<c>IFxTarget</c>）は Phase 7 で差し込むので、その時にこの
-	/// <see cref="ResolveFromAvatar"/> が <c>FxTargetResolver</c> へ移る。
+	/// アバターを選ぶと <see cref="IFxTarget"/> が編集対象の Controller を解決し、
+	/// レイヤーを選んでノードグラフとして編集できる。Direct（直接編集）と
+	/// NDMF(MA)（非破壊マージ）はツールバーの Mode で切り替える（D1 / §2.3）。
 	/// </summary>
 	public class FxcAnimatorWindow : EditorWindow, UnityEditor.Overlays.ISupportsOverlays
 	{
@@ -40,10 +34,22 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		private ObjectField _avatarField;
 		private ObjectField _controllerField;
+		private ToolbarMenu _modeMenu;
 
 		private GameObject _avatar;
 		private AnimatorController _controller;
 		private AvatarPreviewService _preview;
+
+		/// <summary>いま選べるモードと、選ばれているモード（§2.3）。</summary>
+		private List<IFxTarget> _targets = new List<IFxTarget>();
+		private IFxTarget _target;
+
+		/// <summary>
+		/// ツールバーで Controller を直に指定された。
+		/// このときターゲットの <c>ResolveController</c> で上書きしない
+		/// （アバターに紐づかない Controller を眺めたい場面がある）。
+		/// </summary>
+		private bool _manualController;
 
 		/// <summary>初回レイアウト後に一度だけ Frame All する。</summary>
 		private bool _framePending;
@@ -62,6 +68,10 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			_watcher = new AcChangeWatcher();
 			_watcher.Changed += OnExternalChange;
+
+			// 編集が確定したらターゲットへ知らせる（Direct は SetDirty、
+			// NDMF(MA) は MA コンポーネントのパラメータ定義を同期する）。
+			AcEdit.AfterEdit += OnAfterEdit;
 
 			VisualElement root = rootVisualElement;
 			root.Add(BuildToolbar());
@@ -119,7 +129,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 					height = 18f,
 					paddingLeft = 6f,
 					unityTextAlign = TextAnchor.MiddleLeft,
-					color = new Color(0.6f, 0.6f, 0.64f)
+					color = FxcPanelLayout.PlaceholderColor
 				}
 			};
 			right.Add(_status);
@@ -132,15 +142,18 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_graph.RegisterCallback<GeometryChangedEvent>(OnGraphGeometryChanged);
 
 			// 起動時にヒエラルキーで選ばれているアバターを拾っておく。
+			// ここは<b>ユーザーが指定したわけではない</b>ので、作成や複製は提案しない
+			// （ウィンドウを開いただけでダイアログが出るのは論外）。
 			if (Selection.activeGameObject != null)
 			{
-				SetAvatar(Selection.activeGameObject);
+				SetAvatar(Selection.activeGameObject, interactive: false);
 			}
 			UpdateChrome();
 		}
 
 		private void OnDisable()
 		{
+			AcEdit.AfterEdit -= OnAfterEdit;
 			if (_watcher != null)
 			{
 				_watcher.Changed -= OnExternalChange;
@@ -181,6 +194,13 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_avatarField.RegisterValueChangedCallback(evt => SetAvatar(evt.newValue as GameObject));
 			bar.Add(_avatarField);
 
+			// シーンから候補を拾う口。ヒエラルキーで探して D&D するより速い。
+			bar.Add(BuildAvatarPicker());
+
+			_modeMenu = new ToolbarMenu { text = "Mode" };
+			_modeMenu.tooltip = "編集対象の解決と適用先を切り替えます（Direct / NDMF(MA)）";
+			bar.Add(_modeMenu);
+
 			_controllerField = new ObjectField("Controller")
 			{
 				objectType = typeof(AnimatorController),
@@ -188,8 +208,12 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			};
 			_controllerField.style.width = 320f;
 			_controllerField.labelElement.style.minWidth = 66f;
-			_controllerField.RegisterValueChangedCallback(
-				evt => SetController(evt.newValue as AnimatorController, keepLayer: false));
+			_controllerField.RegisterValueChangedCallback(evt =>
+			{
+				// ユーザーが直に指したものは、以降の再構築で上書きしない。
+				_manualController = true;
+				SetController(evt.newValue as AnimatorController, keepLayer: false);
+			});
 			bar.Add(_controllerField);
 
 			bar.Add(new ToolbarButton(() => _graph.FrameAll()) { text = "Frame All" });
@@ -197,6 +221,43 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			bar.Add(BuildPanelMenu());
 
 			return bar;
+		}
+
+		/// <summary>シーンにあるアバター候補から選ぶドロップダウン（§2.1）。</summary>
+		private VisualElement BuildAvatarPicker()
+		{
+			var menu = new ToolbarMenu { text = "▾" };
+			menu.tooltip = "シーンのアバターから選ぶ";
+			menu.style.width = 24f;
+
+			// 中身は開くたびに作り直す。シーンは編集中に変わる。
+			menu.RegisterCallback<PointerDownEvent>(_ =>
+			{
+				// DropdownMenu は使い回されるので、一度空にしてから積む。
+				for (int i = menu.menu.MenuItems().Count - 1; i >= 0; i--)
+				{
+					menu.menu.RemoveItemAt(i);
+				}
+
+				List<GameObject> avatars = FxTargetResolver.FindAvatars();
+				if (avatars.Count == 0)
+				{
+					menu.menu.AppendAction("（シーンにアバターがありません）", _2 => { }, DropdownMenuAction.Status.Disabled);
+					return;
+				}
+				for (int i = 0; i < avatars.Count; i++)
+				{
+					GameObject avatar = avatars[i];
+					menu.menu.AppendAction(
+						avatar.name,
+						_2 => SetAvatar(avatar),
+						_2 => avatar == _avatar
+							? DropdownMenuAction.Status.Checked
+							: DropdownMenuAction.Status.Normal);
+				}
+			}, TrickleDown.TrickleDown);
+
+			return menu;
 		}
 
 		#endregion
@@ -212,9 +273,14 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			return _preview != null && _preview.IsUsable ? _preview : null;
 		}
 
-		private void SetAvatar(GameObject avatar)
+		/// <param name="interactive">
+		/// 支度のできていないターゲットに作成・複製を提案してよいか。
+		/// ユーザーが自分でアバターを指したときだけ true にする。
+		/// </param>
+		private void SetAvatar(GameObject avatar, bool interactive = true)
 		{
 			_avatar = avatar;
+			_manualController = false;
 			// プレビューはアバター1体につき1シーン。差し替わったら前のものは畳まれる。
 			_preview = AvatarPreviewService.ForAvatar(avatar);
 			if (_avatarField != null && _avatarField.value != (UnityEngine.Object)avatar)
@@ -222,51 +288,122 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				_avatarField.SetValueWithoutNotify(avatar);
 			}
 
-			AnimatorController resolved = ResolveFromAvatar(avatar);
-			if (resolved != null)
+			_targets = FxTargetResolver.CreateTargets(avatar);
+			_target = FxTargetResolver.ChooseDefault(_targets, FxTargetResolver.PreferredMode);
+			RebuildModeMenu();
+
+			ApplyTarget(keepLayer: false, interactive: interactive);
+		}
+
+		/// <summary>ユーザーがモードを選んだ。</summary>
+		private void SetMode(IFxTarget target)
+		{
+			if (target == null || target == _target)
 			{
-				SetController(resolved, keepLayer: false);
+				return;
 			}
-			else
-			{
-				UpdateChrome();
-			}
+			_target = target;
+			_manualController = false;
+			FxTargetResolver.PreferredMode = target.Id;
+			RebuildModeMenu();
+			ApplyTarget(keepLayer: false, interactive: true);
 		}
 
 		/// <summary>
-		/// アバターから編集対象の Controller を引く。
-		/// VRC アバターなら FX レイヤー、そうでなければ素の Animator のもの。
-		/// Phase 7 で <c>IFxTarget</c> に置き換わる暫定版。
+		/// 選ばれているターゲットから Controller を引いて表示する。
+		///
+		/// <paramref name="interactive"/> が true のときだけ、支度のできていない
+		/// ターゲットに <c>TryPrepareForEditing</c> を投げる（＝ダイアログが出る）。
+		/// Undo や外部変更からの再構築で呼ぶときは必ず false にすること。
+		/// 毎回聞かれるのは、編集を邪魔する以外の何物でもない。
 		/// </summary>
-		private static AnimatorController ResolveFromAvatar(GameObject avatar)
+		private void ApplyTarget(bool keepLayer, bool interactive)
 		{
-			if (avatar == null)
+			if (_target == null)
 			{
-				return null;
+				SetController(null, keepLayer);
+				return;
 			}
 
-#if VRC
-			var descriptor = avatar.GetComponent<VRCAvatarDescriptor>();
-			if (descriptor != null)
+			AnimatorController resolved = _target.ResolveController();
+
+			if (interactive)
 			{
-				VRCAvatarDescriptor.CustomAnimLayer[] layers = descriptor.baseAnimationLayers;
-				for (int i = 0; i < layers.Length; i++)
+				string writeReason;
+				bool needsPrepare = resolved == null
+					|| !AcControllerAccess.IsWritable(resolved, out writeReason);
+				if (needsPrepare)
 				{
-					if (layers[i].type != VRCAvatarDescriptor.AnimLayerType.FX || layers[i].isDefault)
+					string reason;
+					if (_target.TryPrepareForEditing(true, out reason))
 					{
-						continue;
+						resolved = _target.ResolveController();
 					}
-					var controller = layers[i].animatorController as AnimatorController;
-					if (controller != null)
-					{
-						return controller;
-					}
+					// 断られた／できなかった場合はそのまま進む。
+					// 解決できた Controller があれば読み取り専用で開く（§2.3）。
 				}
 			}
-#endif
 
-			var animator = avatar.GetComponent<UnityEngine.Animator>();
-			return animator != null ? animator.runtimeAnimatorController as AnimatorController : null;
+			SetController(resolved, keepLayer);
+		}
+
+		private void RebuildModeMenu()
+		{
+			if (_modeMenu == null)
+			{
+				return;
+			}
+
+			for (int i = _modeMenu.menu.MenuItems().Count - 1; i >= 0; i--)
+			{
+				_modeMenu.menu.RemoveItemAt(i);
+			}
+
+			if (_targets.Count == 0)
+			{
+				_modeMenu.text = "Mode";
+				_modeMenu.menu.AppendAction(
+					"（アバターを選んでください）", _ => { }, DropdownMenuAction.Status.Disabled);
+				return;
+			}
+
+			for (int i = 0; i < _targets.Count; i++)
+			{
+				IFxTarget target = _targets[i];
+				string reason;
+				bool available = target.IsAvailable(out reason);
+
+				// 使えないモードは理由ごと並べる。黙って消すと
+				// 「MA を入れたのに出てこない」の切り分けができない。
+				string label = available ? target.DisplayName : target.DisplayName + "（" + reason + "）";
+
+				_modeMenu.menu.AppendAction(
+					label,
+					_ => SetMode(target),
+					_ =>
+					{
+						if (!available)
+						{
+							return DropdownMenuAction.Status.Disabled;
+						}
+						return target == _target
+							? DropdownMenuAction.Status.Checked
+							: DropdownMenuAction.Status.Normal;
+					});
+			}
+
+			_modeMenu.text = _target != null ? _target.DisplayName : "Mode";
+			_modeMenu.tooltip = _target != null ? _target.Description : "編集対象の解決と適用先";
+		}
+
+		/// <summary>編集確定をターゲットへ流す（§2.3 の <c>OnAfterEdit</c>）。</summary>
+		private void OnAfterEdit(AcEditReport report)
+		{
+			if (_target == null || report == null || report.Controller != _controller)
+			{
+				return;
+			}
+			_target.OnAfterEdit(report);
 		}
 
 		private void SetController(AnimatorController controller, bool keepLayer)
@@ -316,11 +453,15 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		private void Rebuild()
 		{
 			// Controller 自体が差し替わった（Undo でアバターの参照が戻った等）場合に追いつく。
-			AnimatorController fromAvatar = ResolveFromAvatar(_avatar);
-			if (fromAvatar != null && fromAvatar != _controller)
+			// ここはダイアログ厳禁。Undo・フォーカス・アセット変更のたびに通る。
+			if (!_manualController && _target != null)
 			{
-				SetController(fromAvatar, keepLayer: true);
-				return;
+				AnimatorController resolved = _target.ResolveController();
+				if (resolved != null && resolved != _controller)
+				{
+					SetController(resolved, keepLayer: true);
+					return;
+				}
 			}
 
 			// Refresh が選択とビューポートを保ったまま全再構築する（§4.5）。
@@ -374,6 +515,23 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		internal void UnregisterPanel(FxcPanelOverlay panel)
 		{
 			_panels.Remove(panel);
+		}
+
+		/// <summary>いま選ばれているパラメータ名（パネルをまたいで共有する）。</summary>
+		private string _selectedParameter;
+
+		/// <summary>
+		/// どれかのパネルでパラメータが選ばれた。3枚に配って対応する行を光らせる。
+		/// VAR・parameter・menu は名前で結ばれているだけなので、
+		/// 対応関係が目で追えないと差分や「効かないメニュー」の意味が分からない（§6.2）。
+		/// </summary>
+		internal void OnParameterSelected(string name)
+		{
+			_selectedParameter = name;
+			for (int i = 0; i < _panels.Count; i++)
+			{
+				_panels[i].SetParameterHighlight(name);
+			}
 		}
 
 		/// <summary>再表示などで中身が作り直されたパネルに、表示対象を入れ直す。</summary>
@@ -440,8 +598,17 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		{
 			// パネルはウィンドウより先に作られることがある（レイアウト復元時）。
 			// その場合 _source がまだ無いので、編集可否は「不可」に倒しておく。
-			bool readOnly = _source == null || !_source.CanEdit;
-			panel.ApplyTarget(_controller, readOnly, _avatar);
+			var context = new FxcPanelContext
+			{
+				Controller = _controller,
+				ReadOnly = _source == null || !_source.CanEdit,
+				Avatar = _avatar,
+				ParameterStore = _target != null ? _target.ResolveParameterStore() : null,
+				Menu = _target != null ? _target.ResolveMenu() : null,
+			};
+			panel.ApplyTarget(context);
+			// 中身を作り直すと強調は消える。選択は保つ（§6 の「空のパネルが出る」と同じ話）。
+			panel.SetParameterHighlight(_selectedParameter);
 		}
 
 		private void PushTargetToPanels()
@@ -493,7 +660,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 					var sep = new Label("›");
 					sep.style.marginLeft = 2f;
 					sep.style.marginRight = 2f;
-					sep.style.color = new Color(0.55f, 0.55f, 0.58f);
+					sep.style.color = FxcPanelLayout.PlaceholderColor;
 					_breadcrumb.Add(sep);
 				}
 
@@ -524,9 +691,28 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		{
 			if (_controller == null)
 			{
-				_status.text = _avatar != null
-					? "このアバターから FX レイヤーの AnimatorController を解決できませんでした"
-					: "アバターか AnimatorController を指定してください";
+				if (_avatar == null)
+				{
+					_status.text = "アバターか AnimatorController を指定してください";
+					return;
+				}
+
+				// 解決できない理由はモードによって違う。使えないモードが
+				// 選ばれているならその理由を、そうでなければ支度の仕方を出す。
+				string reason;
+				if (_target == null)
+				{
+					_status.text = "このアバターで使えるモードがありません";
+				}
+				else if (!_target.IsAvailable(out reason))
+				{
+					_status.text = _target.DisplayName + " は使えません: " + reason;
+				}
+				else
+				{
+					_status.text = _target.DisplayName
+						+ " の編集対象がまだありません　·　Mode から選び直すか、もう一度アバターを指定すると作成できます";
+				}
 				return;
 			}
 
@@ -542,8 +728,13 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				? "右クリックで追加 · ポートからドラッグで遷移 · Delete で削除"
 				: (_source.ReadOnlyReason ?? "読み取り専用");
 
+			string targetName = _manualController
+				? "手動"
+				: (_target != null ? _target.DisplayName : "手動");
+
 			_status.text = string.Format(
-				"{0} nodes / {1} edges   ·   {2}",
+				"[{0}]   {1} nodes / {2} edges   ·   {3}",
+				targetName,
 				_source.Nodes.Count,
 				_source.Edges.Count,
 				mode);

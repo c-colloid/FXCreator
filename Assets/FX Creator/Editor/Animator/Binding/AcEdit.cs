@@ -23,6 +23,31 @@ namespace colloid.FXCreator.AnimatorGraph
 
 		public readonly List<UnityEngine.Object> Created = new List<UnityEngine.Object>();
 		public readonly List<UnityEngine.Object> Destroyed = new List<UnityEngine.Object>();
+
+		/// <summary>
+		/// このトランザクションで起きた改名と型変更。
+		///
+		/// 「パラメータが変わった」だけでは、同期設定（Expression Parameters /
+		/// MA Parameters）を追随させられない。名前が変わったのか増えたのかが
+		/// 分からないと、追随側は<b>古い名前の行を残したまま新しい行を足す</b>ことになり、
+		/// 名前が一致しなくなって VRChat で動かなくなる（§6.2）。
+		/// </summary>
+		public readonly List<AcParameterRename> ParameterRenames = new List<AcParameterRename>();
+
+		public readonly List<AcParameterRetype> ParameterRetypes = new List<AcParameterRetype>();
+	}
+
+	public struct AcParameterRename
+	{
+		public string OldName;
+		public string NewName;
+	}
+
+	public struct AcParameterRetype
+	{
+		public string Name;
+		public AnimatorControllerParameterType From;
+		public AnimatorControllerParameterType To;
 	}
 
 	/// <summary>
@@ -834,6 +859,132 @@ namespace colloid.FXCreator.AnimatorGraph
 		}
 
 		/// <summary>
+		/// パラメータの型を変え、<b>条件を新しい型へ読み替える</b>（§6.1）。
+		///
+		/// 型だけ差し替えると、Bool 用の <c>If</c> が Int のパラメータに付いたままになる。
+		/// Unity はそれを弾かないので、見た目は正常なのに遷移しない Controller ができる。
+		/// 何をどう読み替えるかは <see cref="AcParameterTypeChange"/> が決める
+		/// （Controller を読むだけの純粋関数なので、呼ぶ前に確認ダイアログへ出せる）。
+		///
+		/// 読み替えられない参照（Mirror に Int を挿す等）は<b>そのまま残す</b>。
+		/// 黙って消すと、型を戻しても元に戻らない。
+		/// </summary>
+		public void ChangeParameterType(string name, AnimatorControllerParameterType newType)
+		{
+			Guard(() =>
+			{
+				AcParameterTypeChangePlan plan = AcParameterTypeChange.Plan(_controller, name, newType);
+				if (plan.IsNoOp)
+				{
+					return;
+				}
+
+				Record(_controller);
+				AnimatorControllerParameter[] parameters = _controller.parameters;
+				for (int i = 0; i < parameters.Length; i++)
+				{
+					if (!string.Equals(parameters[i].name, name, StringComparison.Ordinal))
+					{
+						continue;
+					}
+					CarryDefault(parameters[i], plan.From, newType);
+					parameters[i].type = newType;
+					break;
+				}
+				// 配列のコピーなので戻さないと反映されない（§4.3 の罠1）。
+				_controller.parameters = parameters;
+				_report.ParametersChanged = true;
+				_report.ParameterRetypes.Add(
+					new AcParameterRetype { Name = name, From = plan.From, To = newType });
+
+				// 条件の読み替え。遷移ごとにまとめて1回だけ書き戻す
+				// （conditions も配列のコピーなので、1本ずつ戻すと最後の1本しか残らない）。
+				var byTransition = new Dictionary<AnimatorTransitionBase, List<AcConditionRewrite>>();
+				for (int i = 0; i < plan.Rewrites.Count; i++)
+				{
+					AcConditionRewrite rewrite = plan.Rewrites[i];
+					if (rewrite.Transition == null)
+					{
+						continue;
+					}
+					List<AcConditionRewrite> list;
+					if (!byTransition.TryGetValue(rewrite.Transition, out list))
+					{
+						list = new List<AcConditionRewrite>();
+						byTransition.Add(rewrite.Transition, list);
+					}
+					list.Add(rewrite);
+				}
+
+				foreach (KeyValuePair<AnimatorTransitionBase, List<AcConditionRewrite>> pair in byTransition)
+				{
+					AnimatorCondition[] conditions = pair.Key.conditions;
+					bool touched = false;
+					for (int i = 0; i < pair.Value.Count; i++)
+					{
+						AcConditionRewrite rewrite = pair.Value[i];
+						if (rewrite.Index < 0 || rewrite.Index >= conditions.Length)
+						{
+							continue;
+						}
+						conditions[rewrite.Index].mode = rewrite.ToMode;
+						conditions[rewrite.Index].threshold = rewrite.ToThreshold;
+						touched = true;
+					}
+					if (touched)
+					{
+						Record(pair.Key);
+						pair.Key.conditions = conditions;
+						// 条件が変われば toggle / switch の畳み込みも変わる（§4.2）。
+						_report.StructureChanged = true;
+					}
+				}
+			});
+		}
+
+		/// <summary>
+		/// 既定値を新しい型へ持ち越す。
+		/// <c>AnimatorControllerParameter</c> は Bool / Int / Float の値を別々に持つので、
+		/// 型だけ変えると「true だった Bool が 0 の Int になる」といった取りこぼしが出る。
+		/// </summary>
+		private static void CarryDefault(
+			AnimatorControllerParameter parameter,
+			AnimatorControllerParameterType from,
+			AnimatorControllerParameterType to)
+		{
+			float value;
+			switch (from)
+			{
+				case AnimatorControllerParameterType.Bool:
+					value = parameter.defaultBool ? 1f : 0f;
+					break;
+				case AnimatorControllerParameterType.Int:
+					value = parameter.defaultInt;
+					break;
+				case AnimatorControllerParameterType.Float:
+					value = parameter.defaultFloat;
+					break;
+				default:
+					// Trigger は値を持たない。
+					value = 0f;
+					break;
+			}
+
+			switch (to)
+			{
+				case AnimatorControllerParameterType.Bool:
+					parameter.defaultBool = Mathf.Abs(value) > 0.0001f;
+					break;
+				case AnimatorControllerParameterType.Int:
+					parameter.defaultInt = Mathf.RoundToInt(value);
+					break;
+				case AnimatorControllerParameterType.Float:
+					parameter.defaultFloat = value;
+					break;
+			}
+		}
+
+		/// <summary>
 		/// パラメータを改名し、<b>Controller 内のすべての参照を追随させる</b>（§6.1）。
 		///
 		/// 追随先は条件式だけではない。取りこぼすと、名前だけ変わって挙動が壊れた
@@ -873,6 +1024,9 @@ namespace colloid.FXCreator.AnimatorGraph
 				}
 				_controller.parameters = parameters;
 				_report.ParametersChanged = true;
+				// 同期設定の追随に「何が何へ変わったか」が要る（§6.2）。
+				_report.ParameterRenames.Add(
+					new AcParameterRename { OldName = oldName, NewName = unique });
 
 				AnimatorControllerLayer[] layers = _controller.layers;
 				for (int i = 0; i < layers.Length; i++)

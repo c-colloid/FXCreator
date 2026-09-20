@@ -1,0 +1,34 @@
+{
+    "name": "FXCreator.Ma",
+    "rootNamespace": "colloid.FXCreator.Targeting.Ma",
+    "references": [
+        "FXCreator",
+        "nadena.dev.modular-avatar.core",
+        "VRC.SDK3A",
+        "VRC.SDKBase"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR",
+        "MA",
+        "VRC"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.vrchat.avatars",
+            "expression": "",
+            "define": "VRC"
+        },
+        {
+            "name": "nadena.dev.modular-avatar",
+            "expression": "",
+            "define": "MA"
+        }
+    ],
+    "noEngineReferences": false
+}

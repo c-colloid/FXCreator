@@ -6,12 +6,36 @@ using UnityEngine.UIElements;
 namespace colloid.FXCreator.AnimatorGraph.View
 {
 	/// <summary>
+	/// パネルへ配る表示対象ひとそろい。
+	///
+	/// パラメータとメニューは <c>IFxTarget</c> が解決したもの（Direct はアバターの
+	/// アセット、NDMF(MA) は MA コンポーネント）なので、パネル側はどのモードで
+	/// 動いているかを知らなくてよい。VRC SDK の型は <c>#if VRC</c> の外へ
+	/// 出せないため、ここでは <see cref="UnityEngine.Object"/> で運ぶ。
+	/// </summary>
+	public struct FxcPanelContext
+	{
+		public AnimatorController Controller;
+		public bool ReadOnly;
+		public GameObject Avatar;
+
+		/// <summary>
+		/// 同期パラメータの宣言先（Direct は Expression Parameters、
+		/// NDMF(MA) は MA Parameters）。無ければ null。
+		/// </summary>
+		public Targeting.IFxParameterStore ParameterStore;
+
+		/// <summary>VRCExpressionsMenu（無ければ null）。</summary>
+		public Object Menu;
+	}
+
+	/// <summary>
 	/// ウィンドウから表示対象を受け取るパネル。
 	/// <see cref="FxcAnimatorWindow"/> は出ているオーバーレイにだけ配ればよい。
 	/// </summary>
 	internal interface IFxcPanel
 	{
-		void ApplyTarget(AnimatorController controller, bool readOnly, GameObject avatar);
+		void ApplyTarget(FxcPanelContext context);
 	}
 
 	/// <summary>
@@ -45,13 +69,29 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			Window?.UnregisterPanel(this);
 		}
 
-		public abstract void ApplyTarget(AnimatorController controller, bool readOnly, GameObject avatar);
+		public abstract void ApplyTarget(FxcPanelContext context);
+
+		/// <summary>
+		/// 別のパネルで選ばれたパラメータを光らせる（§6.2 の選択連動）。
+		/// VAR と parameter は名前で結ばれているだけなので、対応関係を
+		/// 目で追えないと差分の意味が分からない。
+		/// </summary>
+		public virtual void SetParameterHighlight(string name)
+		{
+		}
 
 		protected FxcAnimatorWindow Window => containerWindow as FxcAnimatorWindow;
 
 		/// <summary>
 		/// 各パネルの <see cref="Overlay.CreatePanelContent"/> はこれを通す。
 		/// 中身を広げる・大きさを決める・表示対象を入れ直す、の3つをまとめる。
+		///
+		/// <b>呼び出し側は、これを呼ぶ前に自分のフィールドへ新しいビューを入れておくこと。</b>
+		/// ここから <see cref="FxcAnimatorWindow.RefreshPanel"/> 経由で
+		/// <c>ApplyTarget</c> が走り、その中でフィールドのビューに表示対象を入れる。
+		/// <c>_view = BuildContent(new ...)</c> と書くと右辺が先に評価されるので、
+		/// そのとき <c>_view</c> はまだ<b>捨てる方の（初回は null の）ビュー</b>を指していて、
+		/// 新しいビューには何も入らない。
 		/// </summary>
 		protected T BuildContent<T>(T view) where T : VisualElement
 		{
@@ -90,15 +130,33 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		public override VisualElement CreatePanelContent()
 		{
-			_view = BuildContent(new ParameterListView());
-			return _view;
+			// 先にフィールドへ入れる。BuildContent の中で ApplyTarget が走り、
+			// そこで参照されるのはこのフィールドの方。
+			_view = new ParameterListView();
+			_view.ParameterSelected += name =>
+			{
+				FxcAnimatorWindow window = Window;
+				if (window != null)
+				{
+					window.OnParameterSelected(name);
+				}
+			};
+			return BuildContent(_view);
 		}
 
-		public override void ApplyTarget(AnimatorController controller, bool readOnly, GameObject avatar)
+		public override void ApplyTarget(FxcPanelContext context)
 		{
 			if (_view != null)
 			{
-				_view.SetController(controller, readOnly);
+				_view.SetController(context.Controller, context.ReadOnly, context.ParameterStore);
+			}
+		}
+
+		public override void SetParameterHighlight(string name)
+		{
+			if (_view != null)
+			{
+				_view.SetHighlight(name);
 			}
 		}
 	}
@@ -115,24 +173,35 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		public override VisualElement CreatePanelContent()
 		{
-			_view = BuildContent(new Vrc.VrcParameterPanel());
-			return _view;
+			// 先にフィールドへ入れる。BuildContent の中で ApplyTarget が走り、
+			// そこで参照されるのはこのフィールドの方。
+			_view = new Vrc.VrcParameterPanel();
+			_view.ParameterSelected += name =>
+			{
+				FxcAnimatorWindow window = Window;
+				if (window != null)
+				{
+					window.OnParameterSelected(name);
+				}
+			};
+			return BuildContent(_view);
 		}
 
-		public override void ApplyTarget(AnimatorController controller, bool readOnly, GameObject avatar)
+		public override void ApplyTarget(FxcPanelContext context)
 		{
 			if (_view == null)
 			{
 				return;
 			}
-#if VRC
-			var descriptor = avatar != null
-				? avatar.GetComponent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>()
-				: null;
-			_view.SetTarget(controller, descriptor != null ? descriptor.expressionParameters : null);
-#else
-			_view.SetTarget(controller, null);
-#endif
+			_view.SetTarget(context.Controller, context.ParameterStore, context.ReadOnly);
+		}
+
+		public override void SetParameterHighlight(string name)
+		{
+			if (_view != null)
+			{
+				_view.SetHighlight(name);
+			}
 		}
 	}
 
@@ -148,24 +217,32 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		public override VisualElement CreatePanelContent()
 		{
-			_view = BuildContent(new Vrc.VrcMenuPanel());
-			return _view;
+			// 先にフィールドへ入れる。BuildContent の中で ApplyTarget が走り、
+			// そこで参照されるのはこのフィールドの方。
+			_view = new Vrc.VrcMenuPanel();
+			return BuildContent(_view);
 		}
 
-		public override void ApplyTarget(AnimatorController controller, bool readOnly, GameObject avatar)
+		public override void ApplyTarget(FxcPanelContext context)
 		{
 			if (_view == null)
 			{
 				return;
 			}
 #if VRC
-			var descriptor = avatar != null
-				? avatar.GetComponent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>()
-				: null;
-			_view.SetMenu(descriptor != null ? descriptor.expressionsMenu : null);
+			_view.SetMenu(context.Menu as VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu);
 #else
-			_view.SetMenu(null);
+			_view.SetMenu(context.Menu);
 #endif
+		}
+
+		public override void SetParameterHighlight(string name)
+		{
+			if (_view != null)
+			{
+				// どのメニュー項目がそのパラメータを動かすのかを目で追えるようにする。
+				_view.SetHighlight(name);
+			}
 		}
 	}
 }

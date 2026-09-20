@@ -63,7 +63,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 			_empty = new Label("ノードか遷移を選ぶと内容が出ます");
 			_empty.style.whiteSpace = WhiteSpace.Normal;
-			_empty.style.color = new Color(0.55f, 0.55f, 0.58f);
+			_empty.style.color = FxcPanelLayout.PlaceholderColor;
 			Add(_empty);
 
 			var scroll = new ScrollView(ScrollViewMode.Vertical);
@@ -453,7 +453,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 				style =
 				{
 					whiteSpace = WhiteSpace.Normal,
-					color = new Color(0.6f, 0.6f, 0.64f),
+					color = FxcPanelLayout.PlaceholderColor,
 					marginBottom = 4f
 				}
 			});
@@ -755,7 +755,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 		{
 			var label = new Label(text);
 			label.style.whiteSpace = WhiteSpace.Normal;
-			label.style.color = new Color(0.58f, 0.58f, 0.62f);
+			label.style.color = FxcPanelLayout.SubtleColor;
 			label.style.marginTop = 4f;
 			return label;
 		}

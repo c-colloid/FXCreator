@@ -41,7 +41,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			_empty = new Label("Controller を選ぶとレイヤーが並びます");
 			_empty.style.paddingLeft = 6f;
 			_empty.style.whiteSpace = WhiteSpace.Normal;
-			_empty.style.color = new Color(0.55f, 0.55f, 0.58f);
+			_empty.style.color = FxcPanelLayout.PlaceholderColor;
 			Add(_empty);
 
 			_scroll = new ScrollView(ScrollViewMode.Vertical);
@@ -100,7 +100,19 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 		private sealed class Row : VisualElement
 		{
-			private static readonly Color SelectedColor = new Color(0.24f, 0.38f, 0.55f, 1f);
+			/// <summary>
+		/// 選択行の背景。文字の上に敷くので、スキンに合わせないと文字が沈む。
+		/// static フィールドにするとスキン切り替えに追従しないのでプロパティで持つ。
+		/// </summary>
+		private static Color SelectedColor
+		{
+			get
+			{
+				return EditorGUIUtility.isProSkin
+					? new Color(0.24f, 0.38f, 0.55f, 1f)
+					: new Color(0.44f, 0.62f, 0.86f, 1f);
+			}
+		}
 
 			public int Index { get; }
 
@@ -123,7 +135,7 @@ namespace colloid.FXCreator.AnimatorGraph.View
 
 				_detail = new Label(Describe(layer)) { pickingMode = PickingMode.Ignore };
 				_detail.style.fontSize = 9f;
-				_detail.style.color = new Color(0.55f, 0.55f, 0.58f);
+				_detail.style.color = FxcPanelLayout.PlaceholderColor;
 				_detail.style.overflow = Overflow.Hidden;
 				Add(_detail);
 

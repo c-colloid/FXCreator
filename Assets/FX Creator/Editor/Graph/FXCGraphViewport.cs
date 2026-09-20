@@ -15,7 +15,17 @@ namespace colloid.FXCreator.Graph
 	public sealed class FXCGraphViewport
 	{
 		public const float MinZoom = 0.2f;
-		public const float MaxZoom = 2.0f;
+
+		/// <summary>
+		/// 上限。当初は 2.0 だったが、ノード内プレビュー（§5）でアニメーションを
+		/// <b>見る</b>には足りなかった。34 グラフ単位のサムネイルは 2.0 倍でも
+		/// 画面上 68px しかなく、動きを追うには小さすぎる。
+		/// 6.0 なら 204px になり、表情や手の形が判別できる。
+		///
+		/// 拡大しても絵が粗くならないよう、プレビューの焼き込み解像度も
+		/// ズームに追従させてある（<c>StateNodeView.RenderSizeFor</c>）。
+		/// </summary>
+		public const float MaxZoom = 6.0f;
 
 		/// <summary>ホイール1ノッチあたりの倍率。</summary>
 		private const float ZoomStepBase = 1.1f;

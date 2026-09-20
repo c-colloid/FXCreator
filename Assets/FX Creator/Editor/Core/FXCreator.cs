@@ -57,7 +57,9 @@ public class FXCreator : EditorWindow
 #endregion
 #region CreateWindow
 
-	[MenuItem("Tools/FXCreator/ShowPanel", priority = 1000)]
+	// v0.2 の①アニメーション登録の試作（Docs/FXCreator-Design.md §1）。
+	// 「ShowPanel」は中身を説明していないので、何が開くかが分かる名前にした。
+	[MenuItem("Tools/FXCreator/Animation List (WIP)", priority = 1010)]
     public static void ShowWindow()
     {
         FXCreator wnd = GetWindow<FXCreator>();

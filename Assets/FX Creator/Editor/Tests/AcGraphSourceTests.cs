@@ -185,6 +185,44 @@ namespace colloid.FXCreator.Tests
 			Assert.That(node.Title, Is.EqualTo("Idle"));
 		}
 
+		/// <summary>
+		/// ノードの大きさは見栄えではなく<b>実データと標準ウィンドウ</b>から決める（§3.5）。
+		/// この3つが崩れると、読み込んだだけでノードが重なるか、
+		/// 遷移の線が特殊ノードの下に隠れる。
+		/// </summary>
+		[Test]
+		public void NodeSizesFollowTheLayoutRules()
+		{
+			// 1. スナップ幅（10）の倍数。半端だと、スナップして並べても縁が合わない。
+			foreach (Vector2 size in new[] { AcGraphSource.StateSize, AcGraphSource.SpecialSize })
+			{
+				Assert.That(size.x % 10f, Is.EqualTo(0f).Within(0.0001f), "幅 " + size.x);
+				Assert.That(size.y % 10f, Is.EqualTo(0f).Within(0.0001f), "高さ " + size.y);
+			}
+
+			// 2. 実アバターのステート最小間隔は 40。これを超えると読み込んだだけで重なる。
+			Assert.That(AcGraphSource.StateSize.y, Is.LessThanOrEqualTo(40f));
+
+			// 3. 特殊ノードは State より小さい（標準 Animator の実測は 160×28 対 200×36）。
+			//    同じ大きさにすると、State の間を通る線が特殊ノードの下に隠れる。
+			Assert.That(AcGraphSource.SpecialSize.x, Is.LessThan(AcGraphSource.StateSize.x));
+			Assert.That(AcGraphSource.SpecialSize.y, Is.LessThan(AcGraphSource.StateSize.y));
+		}
+
+		[Test]
+		public void SpecialNodesUseSpecialSize()
+		{
+			AnimatorController controller = NewController();
+			Root(controller).anyStatePosition = new Vector3(10f, 20f, 0f);
+
+			AcGraphSource source = Open(controller);
+			AcGraphNode node = Node(source, AcNodeRef.MakeId(AcNodeKind.Any, Root(controller)));
+
+			// 位置は左上隅のまま（小さくしても標準ウィンドウと同じところに出る）。
+			Assert.That(node.GraphRect.position, Is.EqualTo(new Vector2(10f, 20f)));
+			Assert.That(node.GraphRect.size, Is.EqualTo(AcGraphSource.SpecialSize));
+		}
+
 		[Test]
 		public void StateSubtitleAndInfoDescribeMotionSpeedAndWriteDefaults()
 		{

@@ -21,7 +21,7 @@ public class FolderPathMenuItem
 	public FolderPathMenuItem(){}
 	
 	#region Methods
-	[MenuItem("Assets/FXCreaters/Select This Folder", false, 1050)]
+	[MenuItem("Assets/FX Creator/Select This Folder", false, 1050)]
 	public static string GetFolderPathByProject()
 	{
 		int ID = Selection.activeInstanceID;
@@ -31,7 +31,7 @@ public class FolderPathMenuItem
 		return path;
 	}
 	//MenuItemの対象がアセットの場合メニューを選択不可にする
-	[MenuItem("Assets/FXCreaters/Select This Folder", true)]
+	[MenuItem("Assets/FX Creator/Select This Folder", true)]
 	public static bool ShowGetFolderPathByProject()
 	{
 		int ID = Selection.activeInstanceID;

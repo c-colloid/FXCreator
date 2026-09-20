@@ -116,8 +116,19 @@ namespace colloid.FXCreator.AnimatorGraph
 		/// </summary>
 		public static readonly Vector2 StateSize = new Vector2(200f, 40f);
 
-		/// <summary>Any / Entry / Exit / (Up) の大きさ。丸いピル型で描く。</summary>
-		public static readonly Vector2 SpecialSize = new Vector2(200f, 40f);
+		/// <summary>
+		/// Any / Entry / Exit / (Up) の大きさ。丸いピル型で描く。
+		///
+		/// **State と同じ大きさにしてはいけない。** 標準 Animator ウィンドウの
+		/// 実測（ズーム 1:1）は State が 200×36 に対し、特殊ノードは **160×28**。
+		/// 同じ 200×40 で描くと、State の間を通る遷移の線が特殊ノードの下に
+		/// 隠れてしまい、元の Animator と見比べたときに線が減ったように見える。
+		///
+		/// 実測に合わせつつ、§3.5 の規則（スナップ幅 10 の倍数）に乗せて 160×30 にした。
+		/// 位置は Controller の <c>anyStatePosition</c> 等が指す<b>左上隅</b>のままなので、
+		/// 小さくしても標準ウィンドウと同じ位置に並ぶ。
+		/// </summary>
+		public static readonly Vector2 SpecialSize = new Vector2(160f, 30f);
 
 		#endregion
 
@@ -242,18 +253,13 @@ namespace colloid.FXCreator.AnimatorGraph
 				return;
 			}
 
-			string path = AssetDatabase.GetAssetPath(Controller);
-			if (string.IsNullOrEmpty(path))
+			// 規則は Targeting（複製して差し替えるかの判断）と共有する。
+			// 片方だけが知っている条件があると、どちらかが必ず嘘をつく。
+			string reason;
+			if (!AcControllerAccess.IsWritable(Controller, out reason))
 			{
 				_readOnly = true;
-				ReadOnlyReason = "アセットとして保存されていない Controller です";
-				return;
-			}
-			if (path.StartsWith("Packages/", StringComparison.Ordinal))
-			{
-				// 不変パッケージ内のアセットは書き換えても保存されない。
-				_readOnly = true;
-				ReadOnlyReason = "パッケージ内の Controller なので編集できません";
+				ReadOnlyReason = reason;
 			}
 		}
 

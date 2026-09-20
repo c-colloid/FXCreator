@@ -17,6 +17,19 @@ namespace colloid.FXCreator.AnimatorGraph.Vrc
 	{
 		private readonly Label _status;
 		private readonly ScrollView _scroll;
+		private readonly VisualElement _columns;
+
+		/// <summary>いま強調しているパラメータ名（§6.2 の選択連動）。</summary>
+		private string _highlight;
+
+		private const string RowClass = "fxc-menu-row";
+
+		/// <summary>列の幅。可変にするのは name と parameter の2つだけ。</summary>
+		private const float TypeColumn = 62f;
+		private const float ValueColumn = 34f;
+
+		/// <summary>これより細くなったら型の列を畳んで、名前とパラメータに回す。</summary>
+		private const float NarrowWidth = 260f;
 
 		public VrcMenuPanel()
 		{
@@ -30,10 +43,54 @@ namespace colloid.FXCreator.AnimatorGraph.Vrc
 			_status.style.whiteSpace = WhiteSpace.Normal;
 			Add(_status);
 
+			_columns = BuildHeader();
+			_columns.style.display = DisplayStyle.None;
+			Add(_columns);
+
 			_scroll = new ScrollView(ScrollViewMode.Vertical);
 			_scroll.style.flexGrow = 1;
 			_scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
 			Add(_scroll);
+
+#if VRC
+			View.FxcPanelLayout.CollapseOptionalColumnsWhenNarrow(this, NarrowWidth);
+#endif
+		}
+
+		/// <summary>
+		/// そのパラメータを動かすメニュー項目を光らせる。
+		/// 「このパラメータはどこから触れるのか」が一番知りたい情報なので、
+		/// 行の<b>parameter 列</b>と突き合わせる。
+		/// </summary>
+		public void SetHighlight(string name)
+		{
+			if (string.Equals(_highlight, name, System.StringComparison.Ordinal))
+			{
+				return;
+			}
+			_highlight = name;
+			ApplyHighlight();
+		}
+
+		private void ApplyHighlight()
+		{
+			_scroll.Query<VisualElement>(className: RowClass).ForEach(row =>
+			{
+				bool on = _highlight != null && (string)row.userData == _highlight;
+				row.style.backgroundColor = on
+					? View.FxcPanelLayout.HighlightColor
+					: Color.clear;
+			});
+		}
+
+		private static VisualElement BuildHeader()
+		{
+			VisualElement row = View.FxcPanelLayout.HeaderRow();
+			row.Add(View.FxcPanelLayout.HeaderFlexCell("name"));
+			row.Add(View.FxcPanelLayout.HeaderCell("type", TypeColumn, optional: true));
+			row.Add(View.FxcPanelLayout.HeaderFlexCell("parameter"));
+			row.Add(View.FxcPanelLayout.HeaderCell("value", ValueColumn));
+			return row;
 		}
 
 #if VRC
@@ -44,6 +101,7 @@ namespace colloid.FXCreator.AnimatorGraph.Vrc
 			if (menu == null)
 			{
 				_status.text = "アバターに Expression Menu が設定されていません";
+				_columns.style.display = DisplayStyle.None;
 				return;
 			}
 
@@ -52,8 +110,10 @@ namespace colloid.FXCreator.AnimatorGraph.Vrc
 			_status.text = menu.name + "　" + count + " / " + max
 				+ (count > max ? "　★超過しています" : string.Empty);
 			_status.style.color = count > max
-				? new Color(0.92f, 0.55f, 0.45f)
-				: new Color(0.62f, 0.62f, 0.66f);
+				? View.FxcPanelLayout.ErrorColor
+				: View.FxcPanelLayout.SubtleColor;
+
+			_columns.style.display = count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
 
 			for (int i = 0; i < count; i++)
 			{
@@ -63,49 +123,58 @@ namespace colloid.FXCreator.AnimatorGraph.Vrc
 					continue;
 				}
 
-				var row = new VisualElement
-				{
-					style =
-					{
-						flexDirection = FlexDirection.Row,
-						alignItems = Align.Center,
-						paddingLeft = 4f,
-						marginBottom = 1f,
-						flexShrink = 0
-					}
-				};
+				VisualElement row = View.FxcPanelLayout.Row();
+				row.AddToClassList(RowClass);
 
-				var name = new Label(control.name);
-				name.style.flexGrow = 1;
-				name.style.overflow = Overflow.Hidden;
-				row.Add(name);
+				row.Add(View.FxcPanelLayout.Flexible(control.name));
 
-				var type = new Label(control.type.ToString());
-				type.style.width = 110f;
-				type.style.color = new Color(0.58f, 0.58f, 0.62f);
+				var type = View.FxcPanelLayout.Fixed(new Label(control.type.ToString()), TypeColumn);
+				type.style.fontSize = 9f;
+				type.style.color = View.FxcPanelLayout.SubtleColor;
+				type.tooltip = control.type.ToString();
+				type.AddToClassList(View.FxcPanelLayout.OptionalColumnClass);
 				row.Add(type);
 
+				// サブメニューは中身を辿らない（v0.1 は1階層だけ見せる）。
+				// 以前はここで<b>幅の無いラベルを行の末尾に足していた</b>ので、
+				// 行の合計が窓幅を超えて右端の列が外へ出ていた。
+				// 飛び先はパラメータ列に畳む（SubMenu にパラメータが要ることは稀で、
+				// あるときはそちらを優先して飛び先はツールチップへ回す）。
+				bool isSubMenu = control.type == VRCExpressionsMenu.Control.ControlType.SubMenu;
+				string subMenuName = control.subMenu != null ? control.subMenu.name : "(未設定)";
 				string parameterName = control.parameter != null ? control.parameter.name : string.Empty;
-				var parameter = new Label(string.IsNullOrEmpty(parameterName) ? "-" : parameterName);
-				parameter.style.width = 130f;
-				parameter.style.overflow = Overflow.Hidden;
+
+				Label parameter;
+				if (string.IsNullOrEmpty(parameterName))
+				{
+					parameter = View.FxcPanelLayout.Flexible(isSubMenu ? "▸ " + subMenuName : "-");
+					parameter.style.color = View.FxcPanelLayout.SubtleColor;
+				}
+				else
+				{
+					parameter = View.FxcPanelLayout.Flexible(parameterName);
+					if (isSubMenu)
+					{
+						parameter.tooltip = parameterName + "\n▸ " + subMenuName;
+					}
+				}
+				// 連動の突き合わせ先はパラメータ名。無いものは連動しない。
+				row.userData = string.IsNullOrEmpty(parameterName) ? null : parameterName;
 				row.Add(parameter);
 
-				var value = new Label(control.value.ToString("0.##"));
-				value.style.width = 40f;
-				value.style.color = new Color(0.58f, 0.58f, 0.62f);
+				// SubMenu の value は使われないので、数字を出すと誤解のもとになる。
+				var value = View.FxcPanelLayout.Fixed(
+					new Label(isSubMenu ? string.Empty : control.value.ToString("0.##")), ValueColumn);
+				value.style.fontSize = 9f;
+				value.style.color = View.FxcPanelLayout.SubtleColor;
 				row.Add(value);
-
-				// サブメニューは中身を辿らない（v0.1 は1階層だけ見せる）。
-				if (control.type == VRCExpressionsMenu.Control.ControlType.SubMenu)
-				{
-					var sub = new Label(control.subMenu != null ? "▸ " + control.subMenu.name : "▸ (未設定)");
-					sub.style.color = new Color(0.5f, 0.5f, 0.55f);
-					row.Add(sub);
-				}
 
 				_scroll.Add(row);
 			}
+
+			// 作り直した行にも、いまの畳み具合と強調を反映する。
+			View.FxcPanelLayout.ApplyCollapseState(this, NarrowWidth);
+			ApplyHighlight();
 		}
 #else
 		public void SetMenu(UnityEngine.Object menu)
