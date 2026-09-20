@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Stopwatch = System.Diagnostics.Stopwatch;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
@@ -29,7 +30,19 @@ namespace colloid.FXCreator.Graph
 		/// <summary>これより縮んだらラベルを出さない。読めない字に描画コストを払わない。</summary>
 		private const float MinZoomForLabel = 0.75f;
 
-		private static readonly Color LabelBackColor = new Color(0.16f, 0.16f, 0.18f, 0.92f);
+		/// <summary>
+		/// ラベルの下敷き。線の上に直接書くと読めないので敷く。
+		/// ライトスキンで暗いままだと、明るい画面に黒い札が並んで目立ちすぎる。
+		/// </summary>
+		private static Color LabelBackColor
+		{
+			get
+			{
+				return EditorGUIUtility.isProSkin
+					? new Color(0.16f, 0.16f, 0.18f, 0.92f)
+					: new Color(0.95f, 0.95f, 0.96f, 0.92f);
+			}
+		}
 
 		/// <summary>平行エッジのラベルを曲線に沿ってずらす量（t の差）。</summary>
 		private const float LabelStagger = 0.3f;
@@ -40,8 +53,16 @@ namespace colloid.FXCreator.Graph
 		/// <summary>線の根元に打つ丸の半径（ズーム1のとき）。</summary>
 		private const float RootDotRadius = 3f;
 
-		/// <summary>注目していないエッジの不透明度。消さずに落とす。</summary>
-		private const float DimAlpha = 0.22f;
+		/// <summary>
+		/// 注目していないエッジの不透明度。消さずに落とす。
+		///
+		/// ライトスキンでは同じ値だと<b>完全に消える</b>。暗い線を明るい背景へ
+		/// アルファで薄めるほうが、明るい線を暗い背景へ薄めるより速く沈むため。
+		/// </summary>
+		private static float DimAlpha
+		{
+			get { return EditorGUIUtility.isProSkin ? 0.22f : 0.32f; }
+		}
 
 		/// <summary>いまポインタが乗っているエッジ。注目の対象を1本に絞る。</summary>
 		private string _hoveredEdgeId;
@@ -75,7 +96,15 @@ namespace colloid.FXCreator.Graph
 		}
 
 		/// <summary>ラベルの文字色。線の色をそのまま使うと背景に沈んで読めない。</summary>
-		private static readonly Color LabelTextColor = new Color(0.86f, 0.86f, 0.90f);
+		private static Color LabelTextColor
+		{
+			get
+			{
+				return EditorGUIUtility.isProSkin
+					? new Color(0.86f, 0.86f, 0.90f)
+					: new Color(0.13f, 0.13f, 0.16f);
+			}
+		}
 
 		/// <summary>
 		/// 端点が「どのノードのどの辺の何番目か」。
@@ -105,7 +134,9 @@ namespace colloid.FXCreator.Graph
 		private readonly List<int> _parallelIndex = new List<int>();
 		private readonly List<int> _parallelCount = new List<int>();
 
-		public Color SelectedColor { get; set; } = new Color(0.30f, 0.65f, 1f, 1f);
+		public Color SelectedColor { get; set; } = EditorGUIUtility.isProSkin
+			? new Color(0.30f, 0.65f, 1f, 1f)
+			: new Color(0.06f, 0.36f, 0.82f, 1f);
 
 		/// <summary>接続ドラッグ中のプレビュー線。<see cref="FXCGraphView"/> が設定する。</summary>
 		public bool PendingActive { get; set; }
@@ -574,9 +605,10 @@ namespace colloid.FXCreator.Graph
 			Vector2 p1 = PendingToView;
 			float bend = Mathf.Max(24f, Mathf.Abs(p1.x - p0.x) * 0.4f);
 
+			bool pro = EditorGUIUtility.isProSkin;
 			painter.strokeColor = PendingValid
-				? new Color(0.35f, 0.85f, 0.45f, 1f)
-				: new Color(0.85f, 0.85f, 0.9f, 0.55f);
+				? (pro ? new Color(0.35f, 0.85f, 0.45f, 1f) : new Color(0.10f, 0.52f, 0.20f, 1f))
+				: (pro ? new Color(0.85f, 0.85f, 0.9f, 0.55f) : new Color(0.25f, 0.25f, 0.30f, 0.55f));
 			painter.lineWidth = Mathf.Max(MinLineWidth, 2f * zoom);
 			painter.BeginPath();
 			painter.MoveTo(p0);

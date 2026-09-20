@@ -135,19 +135,79 @@ namespace colloid.FXCreator.AnimatorGraph
 
 		#region Colors
 
-		private static readonly Color StateAccent = new Color(0.45f, 0.50f, 0.58f);
-		private static readonly Color DefaultStateAccent = new Color(0.90f, 0.62f, 0.22f);
-		private static readonly Color SubMachineAccent = new Color(0.38f, 0.55f, 0.72f);
+		/// <summary>
+		/// グラフの配色（Docs/FXCreator-Design.md Phase 8「ダーク/ライト両対応」）。
+		///
+		/// Phase 8 で直したのは<b>パネルの配色だけ</b>だった。エッジ色は背景 0.22 の
+		/// ダークスキン向けに選んだ中間トーンのままで、ライトスキン（背景 0.78）では
+		/// <b>線が背景とほぼ同じ明度になって消える</b>。
+		///
+		/// <c>static readonly</c> にしない。static フィールドは最初のドメインロードで
+		/// 1度しか評価されず、テーマを切り替えても古い色のままになる（§6 で
+		/// <c>FxcPanelLayout</c> を直したときと同じ理由）。
+		///
+		/// 色は <see cref="AcGraphEdge.Color"/> として<b>再構築のたびに焼き込まれる</b>。
+		/// テーマ切り替えはドメインリロードを伴うので作り直されるが、
+		/// そうでない経路が増えたら描画時に引く形へ移すこと。
+		/// </summary>
+		private static bool Pro { get { return EditorGUIUtility.isProSkin; } }
 
-		private static readonly Color EntryFill = new Color(0.33f, 0.60f, 0.35f);
-		private static readonly Color ExitFill = new Color(0.68f, 0.34f, 0.34f);
-		private static readonly Color AnyFill = new Color(0.28f, 0.55f, 0.64f);
-		private static readonly Color ParentFill = new Color(0.40f, 0.40f, 0.45f);
+		private static Color StateAccent
+		{
+			get { return Pro ? new Color(0.45f, 0.50f, 0.58f) : new Color(0.52f, 0.57f, 0.66f); }
+		}
 
-		private static readonly Color TransitionEdge = new Color(0.62f, 0.64f, 0.72f, 1f);
-		private static readonly Color AnyEdge = new Color(0.45f, 0.68f, 0.78f, 1f);
-		private static readonly Color DefaultEdge = new Color(0.55f, 0.78f, 0.55f, 1f);
-		private static readonly Color GroupEdge = new Color(0.58f, 0.52f, 0.72f, 1f);
+		private static Color DefaultStateAccent
+		{
+			get { return Pro ? new Color(0.90f, 0.62f, 0.22f) : new Color(0.82f, 0.52f, 0.10f); }
+		}
+
+		private static Color SubMachineAccent
+		{
+			get { return Pro ? new Color(0.38f, 0.55f, 0.72f) : new Color(0.28f, 0.45f, 0.66f); }
+		}
+
+		// ピルの塗りは白文字を乗せるので、ライトでも暗いまま（明るくすると字が読めない）。
+		private static Color EntryFill
+		{
+			get { return Pro ? new Color(0.33f, 0.60f, 0.35f) : new Color(0.24f, 0.50f, 0.27f); }
+		}
+
+		private static Color ExitFill
+		{
+			get { return Pro ? new Color(0.68f, 0.34f, 0.34f) : new Color(0.60f, 0.25f, 0.25f); }
+		}
+
+		private static Color AnyFill
+		{
+			get { return Pro ? new Color(0.28f, 0.55f, 0.64f) : new Color(0.20f, 0.45f, 0.55f); }
+		}
+
+		private static Color ParentFill
+		{
+			get { return Pro ? new Color(0.40f, 0.40f, 0.45f) : new Color(0.42f, 0.42f, 0.48f); }
+		}
+
+		// 線は背景との明度差がすべて。ライトでは<b>暗い側</b>へ振る。
+		private static Color TransitionEdge
+		{
+			get { return Pro ? new Color(0.62f, 0.64f, 0.72f, 1f) : new Color(0.28f, 0.30f, 0.38f, 1f); }
+		}
+
+		private static Color AnyEdge
+		{
+			get { return Pro ? new Color(0.45f, 0.68f, 0.78f, 1f) : new Color(0.12f, 0.40f, 0.52f, 1f); }
+		}
+
+		private static Color DefaultEdge
+		{
+			get { return Pro ? new Color(0.55f, 0.78f, 0.55f, 1f) : new Color(0.16f, 0.46f, 0.18f, 1f); }
+		}
+
+		private static Color GroupEdge
+		{
+			get { return Pro ? new Color(0.58f, 0.52f, 0.72f, 1f) : new Color(0.36f, 0.28f, 0.58f, 1f); }
+		}
 		private static readonly Color MutedEdge = new Color(0.50f, 0.34f, 0.34f, 0.55f);
 		private static readonly Color SoloEdge = new Color(0.90f, 0.78f, 0.30f, 1f);
 
