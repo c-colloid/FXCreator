@@ -105,6 +105,17 @@ namespace colloid.FXCreator.Graph
 		string ToPortId { get; }
 
 		Color Color { get; }
+
+		/// <summary>
+		/// 線の上に出す短い説明（条件の要約など）。null / 空なら何も描かない。
+		///
+		/// 往復する2本の遷移は見た目が対称なので、線だけでは<b>どちらが「入」で
+		/// どちらが「切」か分からない</b>。クリックしてインスペクタを見るまで
+		/// 判別できないのは、一覧性が要る場面で困る。
+		/// 中身の決め方はドメイン側（<c>AcGraphSource</c>）の責任で、
+		/// <c>Graph/</c> は受け取った文字列を描くだけ。
+		/// </summary>
+		string Label { get; }
 	}
 
 	/// <summary>

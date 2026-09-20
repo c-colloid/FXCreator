@@ -77,11 +77,25 @@ namespace colloid.FXCreator.Graph
 
 		private void ApplyColor()
 		{
-			style.backgroundColor = _highlighted
-				? new Color(0.30f, 0.70f, 1f, 1f)
-				: _baseColor;
-			style.scale = new Scale(_highlighted ? new Vector2(1.4f, 1.4f) : Vector2.one);
+			if (_highlighted)
+			{
+				style.backgroundColor = new Color(0.30f, 0.70f, 1f, 1f);
+				style.scale = new Scale(new Vector2(1.4f, 1.4f));
+				style.opacity = 1f;
+				return;
+			}
+
+			// ポートは<b>遷移を引くための取っ手</b>であって、線が実際に刺さる場所ではない
+			// （線はノードの縁のうち相手に近い側から出る。§3.6）。
+			// はっきり描くと「ここに繋がっている」と読めてしまうので、
+			// 普段は控えめにして、掴もうとしたときだけ出す。
+			style.backgroundColor = _baseColor;
+			style.scale = new Scale(Vector2.one);
+			style.opacity = IdleOpacity;
 		}
+
+		/// <summary>掴んでいないときの濃さ。接続点と見間違えない程度に落とす。</summary>
+		private const float IdleOpacity = 0.35f;
 
 		private void SetBorderColor(Color c)
 		{

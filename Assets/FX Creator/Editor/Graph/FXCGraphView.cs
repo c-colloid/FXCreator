@@ -141,6 +141,8 @@ namespace colloid.FXCreator.Graph
 			RegisterCallback<WheelEvent>(OnWheel);
 			RegisterCallback<PointerDownEvent>(OnPointerDown);
 			RegisterCallback<PointerMoveEvent>(OnPointerMove);
+			// 外に出たまま強調が残ると、どれが注目中か分からなくなる。
+			RegisterCallback<PointerLeaveEvent>(_ => _edgeLayer.SetHoveredEdge(null));
 			RegisterCallback<PointerUpEvent>(OnPointerUp);
 			RegisterCallback<PointerCaptureOutEvent>(OnPointerCaptureOut);
 		RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
@@ -766,6 +768,13 @@ namespace colloid.FXCreator.Graph
 
 		private void OnPointerMove(PointerMoveEvent evt)
 		{
+			// 乗っているエッジを拾って注目対象にする（§3.6 の「複雑になると追えない」対策）。
+			// 操作中は邪魔なので見ない。
+			if (!_panning && !_marqueeActive)
+			{
+				_edgeLayer.SetHoveredEdge(_edgeLayer.PickEdge(evt.localPosition));
+			}
+
 			if (_panning && evt.pointerId == _panPointerId)
 			{
 				Vector2 local = evt.localPosition;

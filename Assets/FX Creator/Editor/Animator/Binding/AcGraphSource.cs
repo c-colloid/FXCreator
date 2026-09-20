@@ -86,6 +86,7 @@ namespace colloid.FXCreator.AnimatorGraph
 		public string ToNodeId { get; set; }
 		public string ToPortId { get; set; }
 		public Color Color { get; set; }
+		public string Label { get; set; }
 	}
 
 	/// <summary>
@@ -916,6 +917,72 @@ namespace colloid.FXCreator.AnimatorGraph
 		/// 通常のノードの端は null にして縁に繋ぐ（ポートに寄せると平行エッジが重なるため）。
 		/// 畳み込みノードはポートごとに意味が違うので、そちらは寄せる必要がある。
 		/// </summary>
+		/// <summary>
+		/// 線の上に出す条件の要約（§3 のエッジラベル）。
+		///
+		/// 往復する2本は見た目が対称なので、<b>どちらが「入」でどちらが「切」か</b>が
+		/// 線だけでは分からない。クリックしてインスペクタを見るまで判別できないのは、
+		/// 一覧性が要る場面で困る。
+		///
+		/// 長いと線を覆ってしまうので、<b>短さを優先</b>する。詳細はインスペクタにある。
+		/// </summary>
+		private static string DescribeTransition(AnimatorTransitionBase transition)
+		{
+			if (transition == null)
+			{
+				return null;
+			}
+
+			AnimatorCondition[] conditions = transition.conditions;
+			if (conditions == null || conditions.Length == 0)
+			{
+				// 条件が無い遷移は Exit Time だけで動く。無条件なら書くことがない。
+				var state = transition as AnimatorStateTransition;
+				return state != null && state.hasExitTime
+					? "Exit " + state.exitTime.ToString("0.##")
+					: null;
+			}
+
+			var sb = new System.Text.StringBuilder();
+			int shown = Mathf.Min(2, conditions.Length);
+			for (int i = 0; i < shown; i++)
+			{
+				if (i > 0)
+				{
+					sb.Append(" & ");
+				}
+				sb.Append(DescribeCondition(conditions[i]));
+			}
+			if (conditions.Length > shown)
+			{
+				sb.Append(" …");
+			}
+			return sb.ToString();
+		}
+
+		private static string DescribeCondition(AnimatorCondition condition)
+		{
+			string name = condition.parameter;
+			switch (condition.mode)
+			{
+				// Bool / Trigger は値を書かない。名前だけのほうが短く、否定も一目で分かる。
+				case AnimatorConditionMode.If:
+					return name;
+				case AnimatorConditionMode.IfNot:
+					return "!" + name;
+				case AnimatorConditionMode.Greater:
+					return name + ">" + condition.threshold.ToString("0.##");
+				case AnimatorConditionMode.Less:
+					return name + "<" + condition.threshold.ToString("0.##");
+				case AnimatorConditionMode.Equals:
+					return name + "=" + condition.threshold.ToString("0.##");
+				case AnimatorConditionMode.NotEqual:
+					return name + "≠" + condition.threshold.ToString("0.##");
+				default:
+					return name;
+			}
+		}
+
 		private void AddEdge(
 			string id,
 			string fromNodeId,
@@ -936,7 +1003,8 @@ namespace colloid.FXCreator.AnimatorGraph
 				FromPortId = fromPortId,
 				ToNodeId = toNodeId,
 				ToPortId = toPortId,
-				Color = color
+				Color = color,
+				Label = DescribeTransition(transition)
 			});
 			if (transition != null)
 			{

@@ -74,6 +74,12 @@ namespace colloid.FXCreator.AnimatorGraph.View
 			AcEdit.AfterEdit += OnAfterEdit;
 
 			VisualElement root = rootVisualElement;
+
+			// パネルにはユーザーが付けた名前（ステート名・パラメータ名・メニュー名）が
+			// 並ぶので、日本語が確実に出るフォントを土台に敷いておく。
+			// 入っていなければ何もしない（uitk-font-fix は任意依存）。
+			colloid.FXCreator.Graph.FXCTextFont.ApplyCjkUi(root);
+
 			root.Add(BuildToolbar());
 
 			// VAR / parameter / menu は Overlay（フローティング）へ移した（§6）。

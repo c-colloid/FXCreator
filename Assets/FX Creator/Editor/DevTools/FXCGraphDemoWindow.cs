@@ -235,6 +235,9 @@ namespace colloid.FXCreator.DevTools
 			public string ToNodeId { get; set; }
 			public string ToPortId { get; set; }
 			public Color Color { get; set; }
+
+			// 性能計測が目的なので、ラベルは描かせない（文字の生成コストを混ぜない）。
+			public string Label { get { return null; } }
 		}
 
 		private sealed class DemoGraphSource : IFXCGraphSource
