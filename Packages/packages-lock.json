@@ -54,8 +54,8 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.nuget.mono-cecil": {
-      "version": "1.11.4",
-      "depth": 2,
+      "version": "1.11.6",
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
@@ -198,6 +198,55 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "io.github.hatayama.uloopmcp": {
+      "version": "3.6.3",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.nuget.mono-cecil": "1.11.6",
+        "com.unity.nuget.newtonsoft-json": "3.2.1",
+        "com.unity.ugui": "1.0.0"
+      },
+      "url": "https://package.openupm.com"
+    },
+    "jp.colloid.agent-panel-pro": {
+      "version": "file:jp.colloid.agent-panel-pro",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "jp.colloid.unity-agent-panel": "0.54.0"
+      }
+    },
+    "jp.colloid.clipgen": {
+      "version": "file:jp.colloid.clipgen",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "jp.colloid.eye-jiggling-generator": {
+      "version": "file:jp.colloid.eye-jiggling-generator",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "jp.colloid.uitk-font-fix": {
+      "version": "file:jp.colloid.uitk-font-fix",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "jp.colloid.unity-agent-panel": {
+      "version": "file:jp.colloid.unity-agent-panel",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "jp.colloid.vrc-expression-params-extension": {
+      "version": "file:jp.colloid.vrc-expression-params-extension",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "jp.lilxyzw.avatar-utils": {
       "version": "file:jp.lilxyzw.avatar-utils",
       "depth": 0,
@@ -229,6 +278,8 @@
       "depth": 0,
       "source": "embedded",
       "dependencies": {
+        "com.unity.collections": "2.1.4",
+        "com.unity.mathematics": "1.2.6",
         "com.unity.modules.animation": "1.0.0"
       }
     },

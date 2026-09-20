@@ -23,6 +23,15 @@
     },
     "nadena.dev.modular-avatar": {
       "version": "1.10.5"
+    },
+    "jp.colloid.uitk-font-fix": {
+      "version": "0.4.1"
+    },
+    "jp.colloid.unity-agent-panel": {
+      "version": "0.45.0"
+    },
+    "jp.colloid.agent-panel-pro": {
+      "version": "0.2.2"
     }
   },
   "locked": {
@@ -31,25 +40,25 @@
       "dependencies": {}
     },
     "lyuma.av3emulator": {
-      "version": "3.4.9",
+      "version": "3.4.13",
       "dependencies": {
         "com.vrchat.avatars": "^3.1.0"
       }
     },
     "vrchat.blackstartx.gesture-manager": {
-      "version": "3.9.6",
+      "version": "3.9.9",
       "dependencies": {
-        "com.vrchat.avatars": ">=3.5.2 <3.10.X"
+        "com.vrchat.avatars": ">=3.10.4 <3.11.X"
       }
     },
     "dev.vrlabs.av3manager": {
-      "version": "2.1.1",
+      "version": "2.1.2",
       "dependencies": {
-        "com.vrchat.avatars": "3.2 - 3.9"
+        "com.vrchat.avatars": "3.2 - 3.10"
       }
     },
     "jp.lilxyzw.liltoon": {
-      "version": "2.3.1",
+      "version": "2.3.4",
       "dependencies": {}
     },
     "jp.lilxyzw.avatar-utils": {
@@ -57,24 +66,35 @@
       "dependencies": {}
     },
     "com.vrchat.avatars": {
-      "version": "3.9.0",
+      "version": "3.10.5",
       "dependencies": {
-        "com.vrchat.base": "3.9.0"
+        "com.vrchat.base": "3.10.5"
       }
     },
     "com.vrchat.base": {
-      "version": "3.9.0",
+      "version": "3.10.5",
       "dependencies": {}
     },
     "nadena.dev.modular-avatar": {
-      "version": "1.14.3",
+      "version": "1.18.7",
       "dependencies": {
-        "com.vrchat.avatars": ">=3.7.4",
-        "nadena.dev.ndmf": ">=1.9.2 <2.0.0-a"
+        "nadena.dev.ndmf": ">=1.14.7 <2.0.0-a"
       }
     },
     "nadena.dev.ndmf": {
-      "version": "1.9.4",
+      "version": "1.14.8",
+      "dependencies": {}
+    },
+    "jp.colloid.uitk-font-fix": {
+      "version": "0.4.1",
+      "dependencies": {}
+    },
+    "jp.colloid.unity-agent-panel": {
+      "version": "0.58.2-beta.3",
+      "dependencies": {}
+    },
+    "jp.colloid.agent-panel-pro": {
+      "version": "0.13.0",
       "dependencies": {}
     }
   }
